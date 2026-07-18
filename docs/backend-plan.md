@@ -1,0 +1,88 @@
+# Backend implementation plan
+
+## Status
+
+The first backend slice is implemented under `backend/`. It uses Rust, Axum, Tokio, SQLx, and PostgreSQL 19-compatible migrations. Redis is intentionally not used.
+
+The service currently provides anonymous sessions, persisted projects/documents/revisions, PostgreSQL-backed compile jobs, structured diagnostics, artifact storage, health endpoints, and a separate worker binary. The Compose worker image includes XeLaTeX and the CV package/font set; host-side compilation remains disabled by default.
+
+## Architecture
+
+- `latex-renderer-backend` serves the HTTP API and runs database migrations.
+- `latex-renderer-worker` claims jobs with PostgreSQL row locking and executes the compiler boundary.
+- Source code is organized by feature: `sessions`, `documents`, and `compilation`.
+- Each feature keeps its models, routes, repository, and service together. Repositories own SQLx persistence, while services own validation, authorization, and use-case coordination.
+- Repository traits and the existing `Compiler` trait are the explicit dependency-injection boundaries. Concrete PostgreSQL repositories and services are composed in `lib.rs`; no workspace crates are needed yet.
+- PostgreSQL generates UUIDv7 identifiers with `uuidv7()` and stores documents, jobs, diagnostics, and bounded PDF artifacts.
+- The first compile profile is `cv-xelatex`; the worker invokes XeLaTeX with `-no-shell-escape`, bounded time, temporary workspaces, and cleanup.
+- Redis is deferred until distributed queue or rate-limit requirements justify it.
+
+### Backend source layout
+
+```text
+backend/src/
+├── main.rs
+├── lib.rs
+├── config.rs
+├── error.rs
+├── sessions/
+│   ├── mod.rs
+│   ├── model.rs
+│   ├── repository.rs
+│   ├── service.rs
+│   └── routes.rs
+├── documents/
+│   ├── mod.rs
+│   ├── model.rs
+│   ├── repository.rs
+│   ├── service.rs
+│   └── routes.rs
+└── compilation/
+    ├── mod.rs
+    ├── model.rs
+    ├── repository.rs
+    ├── service.rs
+    ├── compiler.rs
+    ├── worker.rs
+    └── routes.rs
+```
+
+The backend remains one crate. Additional workspace crates should be introduced only when a boundary becomes independently reusable or independently deployable.
+
+## API boundary
+
+- `GET /health/live`
+- `GET /health/ready`
+- `POST /api/v1/sessions/anonymous`
+- `POST /api/v1/projects`
+- `POST /api/v1/projects/{project_id}/documents`
+- `GET /api/v1/documents/{document_id}`
+- `PUT /api/v1/documents/{document_id}`
+- `POST /api/v1/documents/{document_id}/compile`
+- `GET /api/v1/compile-jobs/{job_id}`
+- `DELETE /api/v1/compile-jobs/{job_id}`
+- `GET /api/v1/artifacts/{artifact_id}`
+
+Compile jobs return queued/running/succeeded/failed/cancelled states and structured diagnostics with optional file, line, and column locations. Successful jobs expose PDF artifact metadata and an authenticated artifact endpoint.
+
+## Remaining backend work
+
+- Add process/container resource enforcement beyond the application timeout.
+- Add real cancellation of an active compiler process and bounded log capture.
+- Add artifact retention cleanup and anonymous quota enforcement.
+- Add deployment configuration, metrics, CI, and PostgreSQL integration tests.
+- Continue frontend integration hardening, richer diagnostic navigation, and production deployment checks.
+- Add account authentication only when the product requires multi-user ownership.
+
+## Verification
+
+Run from the repository root:
+
+```powershell
+cargo fmt --manifest-path backend/Cargo.toml -- --check
+cargo check --manifest-path backend/Cargo.toml
+cargo test --manifest-path backend/Cargo.toml
+docker compose --env-file .env up -d
+```
+
+The `backend/compose.yaml` file uses the official PostgreSQL 19 Beta 2 image, the slim Rust API target, and a separate XeLaTeX-enabled worker target under the `latex-renderer` project name. Only the worker target contains TeX packages and enables compilation. PostgreSQL 19 remains pre-release, so this is for development and compatibility testing only. Beta 2 uses its own Docker volume because beta catalog versions are not directly compatible. The migration rejects servers below major version 19.
