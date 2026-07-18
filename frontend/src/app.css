@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
+
+:root {
+  font-family: 'Newsreader', Georgia, serif;
+  color: #302923;
+  background: #d8d0c4;
+  font-synthesis: none;
+  --ink: #302923;
+  --muted-ink: #756b62;
+  --paper: #f5f0e7;
+  --paper-deep: #ebe4d8;
+  --copper: #a65333;
+  --copper-dark: #7e3b25;
+  --rule: rgba(62, 48, 38, 0.18);
+  --workspace-texture:
+    radial-gradient(rgba(59, 45, 35, 0.08) 0.65px, transparent 0.65px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 30%);
+}
+
+@theme {
+  --font-mono: 'DM Mono', monospace;
+  --font-serif: 'Newsreader', Georgia, serif;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-width: 320px;
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  button {
+    font: inherit;
+  }
+
+  button,
+  [tabindex='0'] {
+    outline: none;
+  }
+
+  button:focus-visible,
+  [tabindex='0']:focus-visible {
+    outline: 2px solid var(--copper);
+    outline-offset: 3px;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathe {
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 9px rgba(158, 75, 47, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
