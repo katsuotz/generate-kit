@@ -1,0 +1,14 @@
+node_modules
+.svelte-kit
+build
+coverage
+playwright-report
+test-results
+.playwright-cli
+target
+.env
+.env.*
+!.env.example
+/logs/
+*.log
+/output/
