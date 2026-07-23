@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "trailingComma": "none",
+  "printWidth": 100,
+  "bracketSameLine": true,
+  "htmlWhitespaceSensitivity": "ignore",
+  "svelte": true,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    ".svelte-kit",
+    "node_modules",
+    "playwright-report",
+    "test-results",
+    ".playwright-cli",
+    "docs",
+    "pnpm-lock.yaml"
+  ]
+}

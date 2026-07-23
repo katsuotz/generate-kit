@@ -14,17 +14,19 @@
       type="button"
       aria-label={`Move ${title} up`}
       disabled={index === 0}
-      on:click={() => onMove(-1)}>↑</button
-    >
+      on:click={() => onMove(-1)}>
+      ↑
+    </button>
     <button
       class="text-button"
       type="button"
       aria-label={`Move ${title} down`}
       disabled={index === total - 1}
-      on:click={() => onMove(1)}>↓</button
-    >
-    <button class="text-button" type="button" aria-label={`Remove ${title}`} on:click={onRemove}
-      >Remove</button
-    >
+      on:click={() => onMove(1)}>
+      ↓
+    </button>
+    <button class="text-button" type="button" aria-label={`Remove ${title}`} on:click={onRemove}>
+      Remove
+    </button>
   </div>
 </header>

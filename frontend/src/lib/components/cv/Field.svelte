@@ -27,8 +27,8 @@
       aria-required={required}
       aria-invalid={error ? 'true' : undefined}
       aria-describedby={error ? errorId : undefined}
-      aria-errormessage={error ? errorId : undefined}
-    ></textarea>
+      aria-errormessage={error ? errorId : undefined}>
+    </textarea>
   {:else}
     <input
       class={classes}
@@ -41,8 +41,7 @@
       aria-required={required}
       aria-invalid={error ? 'true' : undefined}
       aria-describedby={error ? errorId : undefined}
-      aria-errormessage={error ? errorId : undefined}
-    />
+      aria-errormessage={error ? errorId : undefined} />
   {/if}
   {#if error}<small class="field-error" id={errorId}>{error}</small>{/if}
 </label>

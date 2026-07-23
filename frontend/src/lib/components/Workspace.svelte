@@ -281,73 +281,72 @@
       event.preventDefault();
       if (state.status !== 'loading') void generate();
     }
-  }}
-/>
+  }} />
 
 <main
-  class="grid h-screen min-h-0 grid-rows-[74px_minmax(0,1fr)] bg-[#d7cfc3] bg-[image:var(--workspace-texture)] max-[900px]:grid-rows-[68px_46px_minmax(0,1fr)]"
->
+  class="grid h-screen min-h-0 grid-rows-[74px_minmax(0,1fr)] bg-[#d7cfc3] bg-[image:var(--workspace-texture)] max-[900px]:grid-rows-[68px_46px_minmax(0,1fr)]">
   <header
-    class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(245,240,231,.92)] px-7 max-[900px]:px-4"
-  >
+    class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(245,240,231,.92)] px-7 max-[900px]:px-4">
     <div class="flex items-baseline gap-4">
       <h1 class="m-0 text-[27px] font-semibold tracking-[-.025em]">Marginalia</h1>
       <span
-        class="font-mono text-[9px] uppercase tracking-[.18em] text-[#8b5d49] max-[560px]:hidden"
-        >Career dossier</span
-      >
+        class="font-mono text-[9px] uppercase tracking-[.18em] text-[#8b5d49] max-[560px]:hidden">
+        Career dossier
+      </span>
     </div>
     <div class="flex items-center gap-2">
-      <span class="font-mono text-[9px] uppercase tracking-[.1em] text-[#766b61] max-[650px]:hidden"
-        >{state.status === 'loading'
+      <span
+        class="font-mono text-[9px] uppercase tracking-[.1em] text-[#766b61] max-[650px]:hidden">
+        {state.status === 'loading'
           ? 'Setting proof…'
           : dirty && lastGeneratedSource
             ? 'Proof outdated'
             : state.status === 'success'
               ? 'Proof ready'
-              : 'Not generated'}</span
-      >
+              : 'Not generated'}
+      </span>
       <button
         class="border border-[#8a7568] px-3 py-2 font-mono text-[9px] uppercase tracking-[.1em] hover:bg-[#eee4d8]"
         type="button"
         on:click={toggleAdvanced}
-        aria-pressed={advanced}>Source</button
-      >
+        aria-pressed={advanced}>
+        Source
+      </button>
       <button
         class="bg-[var(--copper)] px-4 py-[10px] font-mono text-[10px] font-medium uppercase tracking-[.12em] text-white hover:bg-[var(--copper-dark)] disabled:opacity-50"
         type="button"
         on:click={generate}
-        disabled={!controllerReady || state.status === 'loading'}>Generate CV</button
-      >
+        disabled={!controllerReady || state.status === 'loading'}>
+        Generate CV
+      </button>
     </div>
   </header>
   <nav
     class="hidden grid-cols-2 border-b border-[var(--rule)] bg-[#eee7dc] max-[900px]:grid"
-    aria-label="Workspace view"
-  >
+    aria-label="Workspace view">
     <button
       type="button"
       aria-pressed={mobilePane === 'form'}
       class:active-tab={mobilePane === 'form'}
-      on:click={() => (mobilePane = 'form')}>Form</button
-    >
+      on:click={() => (mobilePane = 'form')}>
+      Form
+    </button>
     <button
       type="button"
       aria-pressed={mobilePane === 'preview'}
       class:active-tab={mobilePane === 'preview'}
-      on:click={() => (mobilePane = 'preview')}>Preview</button
-    >
+      on:click={() => (mobilePane = 'preview')}>
+      Preview
+    </button>
   </nav>
 
   <div class="grid min-h-0 grid-cols-[minmax(520px,56%)_minmax(360px,44%)] max-[900px]:block">
     <section
       class={`grid min-h-0 grid-cols-[185px_minmax(0,1fr)] border-r border-[var(--rule)] bg-[rgba(246,241,233,.94)] max-[900px]:h-full max-[900px]:grid-cols-1 ${mobilePane !== 'form' ? 'max-[900px]:hidden' : ''}`}
-      aria-label="CV form builder"
-    >
+      aria-label="CV form builder">
       <nav
         class="border-r border-[var(--rule)] bg-[rgba(232,224,212,.55)] px-4 py-8 max-[900px]:hidden"
-        aria-label="CV sections"
-      >
+        aria-label="CV sections">
         <p class="mb-5 px-2 font-mono text-[9px] uppercase tracking-[.16em] text-[#8a7769]">
           Dossier / 01—07
         </p>
@@ -359,50 +358,49 @@
             class="mb-1 flex w-full items-center justify-between border-l-2 px-3 py-3 text-left text-[16px] transition-colors"
             class:border-[var(--copper)]={activeSection === section}
             class:border-transparent={activeSection !== section}
-            class:bg-[rgba(255,255,255,.45)]={activeSection === section}
-          >
-            <span>{labels[section]}</span><span class="font-mono text-[8px] text-[#8c7a6e]"
-              >{sectionErrors(section)
+            class:bg-[rgba(255,255,255,.45)]={activeSection === section}>
+            <span>{labels[section]}</span>
+            <span class="font-mono text-[8px] text-[#8c7a6e]">
+              {sectionErrors(section)
                 ? `!${sectionErrors(section)}`
-                : String(index + 1).padStart(2, '0')}</span
-            >
+                : String(index + 1).padStart(2, '0')}
+            </span>
           </button>
         {/each}
       </nav>
 
       <div
         class="builder-scroll min-h-0 overflow-y-auto px-[clamp(24px,4vw,58px)] py-9"
-        on:input={changed}
-      >
+        on:input={changed}>
         <div class="mx-auto max-w-[720px]">
           <p class="mb-2 font-mono text-[9px] uppercase tracking-[.17em] text-[var(--copper)]">
             Section {String(sectionIndex + 1).padStart(2, '0')} / 07
           </p>
           <h2
-            class="mb-1 mt-0 text-[clamp(34px,4vw,48px)] font-medium leading-none tracking-[-.03em]"
-          >
+            class="mb-1 mt-0 text-[clamp(34px,4vw,48px)] font-medium leading-none tracking-[-.03em]">
             {labels[activeSection]}
           </h2>
           <p class="mb-9 mt-2 text-[17px] italic text-[#776a60]">{descriptions[activeSection]}</p>
           {#if errors.length}
             <p
               class="mb-4 font-mono text-[9px] uppercase tracking-[.08em] text-[#923b2d]"
-              role="alert"
-            >
+              role="alert">
               {errors[0].message}
             </p>
           {/if}
           {#if notice}<p
               class="mb-7 border-l-2 border-[var(--copper)] bg-[#efe5d9] px-4 py-3 text-[14px]"
-              role="status"
-            >
+              role="status">
               {notice}
             </p>{/if}
 
           {#if activeSection === 'summary'}
             <div class="grid grid-cols-2 gap-x-7 gap-y-6 max-[560px]:grid-cols-1">
-              <label class="col-span-2 max-[560px]:col-span-1"
-                ><span>Full name <b aria-hidden="true">*</b></span><input
+              <label class="col-span-2 max-[560px]:col-span-1">
+                <span>
+                  Full name <b aria-hidden="true">*</b>
+                </span>
+                <input
                   class={inputClass}
                   id="identity-full-name"
                   data-path="identity.fullName"
@@ -417,29 +415,31 @@
                     : undefined}
                   aria-errormessage={fieldError('identity.fullName')
                     ? 'identity-full-name-error'
-                    : undefined}
-                />{#if fieldError('identity.fullName')}<small
+                    : undefined} />
+                {#if fieldError('identity.fullName')}<small
                     class="field-error"
-                    id="identity-full-name-error">{fieldError('identity.fullName')}</small
-                  >{/if}</label
-              >
-              <label
-                ><span>Professional titles</span><input
+                    id="identity-full-name-error">
+                    {fieldError('identity.fullName')}
+                  </small>{/if}
+              </label>
+              <label>
+                <span>Professional titles</span>
+                <input
                   class={inputClass}
                   bind:value={data.identity.professionalTitles}
-                  placeholder="Design engineer · Researcher"
-                /></label
-              >
-              <label
-                ><span>Location</span><input
+                  placeholder="Design engineer · Researcher" />
+              </label>
+              <label>
+                <span>Location</span>
+                <input
                   class={inputClass}
                   bind:value={data.identity.location}
                   autocomplete="address-level2"
-                  placeholder="London, UK"
-                /></label
-              >
-              <label
-                ><span>Email</span><input
+                  placeholder="London, UK" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input
                   class={inputClass}
                   id="identity-email"
                   data-path="identity.email"
@@ -457,27 +457,29 @@
                     : undefined}
                   aria-errormessage={fieldError('identity.email')
                     ? 'identity-email-error'
-                    : undefined}
-                />{#if fieldError('identity.email')}<small
+                    : undefined} />
+                {#if fieldError('identity.email')}<small
                     class="field-error"
-                    id="identity-email-error">{fieldError('identity.email')}</small
-                  >{/if}</label
-              >
-              <label
-                ><span>Phone</span><input
+                    id="identity-email-error">
+                    {fieldError('identity.email')}
+                  </small>{/if}
+              </label>
+              <label>
+                <span>Phone</span>
+                <input
                   class={inputClass}
                   bind:value={data.identity.phone}
                   autocomplete="tel"
-                  placeholder="+44 20 0000 0000"
-                /></label
-              >
-              <label class="col-span-2 max-[560px]:col-span-1"
-                ><span>Professional summary</span><textarea
+                  placeholder="+44 20 0000 0000" />
+              </label>
+              <label class="col-span-2 max-[560px]:col-span-1">
+                <span>Professional summary</span>
+                <textarea
                   class={textareaClass}
                   bind:value={data.summary}
-                  placeholder="A concise account of the work you do and the value you create."
-                ></textarea></label
-              >
+                  placeholder="A concise account of the work you do and the value you create.">
+                </textarea>
+              </label>
             </div>
             <div class="mt-9 border-t border-[var(--rule)] pt-6">
               <div class="mb-4 flex items-center justify-between">
@@ -485,27 +487,28 @@
                 <button class="text-button" type="button" on:click={addProfile}>+ Add link</button>
               </div>
               {#each data.identity.profiles as profile, profileIndex (profile.id)}<div
-                  class="entry-card grid grid-cols-[130px_1fr_1.5fr_auto] gap-3 max-[620px]:grid-cols-1"
-                >
-                  <label
-                    ><span>Type</span><select
+                  class="entry-card grid grid-cols-[130px_1fr_1.5fr_auto] gap-3 max-[620px]:grid-cols-1">
+                  <label>
+                    <span>Type</span>
+                    <select
                       class={inputClass}
                       data-path={`profiles.${profile.id}.type`}
-                      bind:value={profile.type}
-                      ><option value="website">Website</option><option value="linkedin"
-                        >LinkedIn</option
-                      ><option value="github">GitHub</option><option value="portfolio"
-                        >Portfolio</option
-                      ><option value="x">X</option><option value="other">Other</option></select
-                    ></label
-                  ><label
-                    ><span>Label</span><input
-                      class={inputClass}
-                      bind:value={profile.label}
-                      placeholder="Portfolio"
-                    /></label
-                  ><label
-                    ><span>URL</span><input
+                      bind:value={profile.type}>
+                      <option value="website">Website</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="github">GitHub</option>
+                      <option value="portfolio">Portfolio</option>
+                      <option value="x">X</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Label</span>
+                    <input class={inputClass} bind:value={profile.label} placeholder="Portfolio" />
+                  </label>
+                  <label>
+                    <span>URL</span>
+                    <input
                       class={inputClass}
                       id={`profile-${profile.id}-url`}
                       data-path={`profiles.${profile.id}.url`}
@@ -520,34 +523,37 @@
                         : undefined}
                       aria-errormessage={fieldError(`profiles.${profile.id}.url`)
                         ? `profile-${profile.id}-url-error`
-                        : undefined}
-                    />{#if fieldError(`profiles.${profile.id}.url`)}<small
+                        : undefined} />
+                    {#if fieldError(`profiles.${profile.id}.url`)}<small
                         class="field-error"
-                        id={`profile-${profile.id}-url-error`}
-                        >{fieldError(`profiles.${profile.id}.url`)}</small
-                      >{/if}</label
-                  >
+                        id={`profile-${profile.id}-url-error`}>
+                        {fieldError(`profiles.${profile.id}.url`)}
+                      </small>{/if}
+                  </label>
                   <div class="flex items-center">
                     <button
                       class="text-button"
                       type="button"
                       aria-label="Move profile link up"
                       disabled={profileIndex === 0}
-                      on:click={() => moveProfile(profileIndex, -1)}>↑</button
-                    >
+                      on:click={() => moveProfile(profileIndex, -1)}>
+                      ↑
+                    </button>
                     <button
                       class="text-button"
                       type="button"
                       aria-label="Move profile link down"
                       disabled={profileIndex === data.identity.profiles.length - 1}
-                      on:click={() => moveProfile(profileIndex, 1)}>↓</button
-                    >
+                      on:click={() => moveProfile(profileIndex, 1)}>
+                      ↓
+                    </button>
                     <button
                       class="remove-button"
                       type="button"
                       aria-label="Remove profile link"
-                      on:click={() => removeProfile(profile.id)}>×</button
-                    >
+                      on:click={() => removeProfile(profile.id)}>
+                      ×
+                    </button>
                   </div>
                 </div>{/each}
             </div>
@@ -558,33 +564,38 @@
                   {index}
                   total={data.experience.length}
                   onMove={(d) => move('experience', index, d)}
-                  onRemove={() => remove('experience', entry.id)}
-                />
+                  onRemove={() => remove('experience', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Role"
                     required
                     path={`experience.${entry.id}.role`}
                     error={fieldError(`experience.${entry.id}.role`)}
-                    bind:value={entry.role}
-                  /><Field
+                    bind:value={entry.role} /><Field
                     label="Organization"
                     required
                     path={`experience.${entry.id}.organization`}
                     error={fieldError(`experience.${entry.id}.organization`)}
-                    bind:value={entry.organization}
-                  /><Field label="Location" bind:value={entry.location} /><Field
+                    bind:value={entry.organization} /><Field
+                    label="Location"
+                    bind:value={entry.location} /><Field
                     label="Start date"
-                    bind:value={entry.start}
-                  /><Field label="End date" bind:value={entry.end} disabled={entry.current} /><label
-                    class="check"
-                    ><input type="checkbox" bind:checked={entry.current} /> Current role</label
-                  ><Field wide multiline label="Description" bind:value={entry.description} /><Field
+                    bind:value={entry.start} /><Field
+                    label="End date"
+                    bind:value={entry.end}
+                    disabled={entry.current} />
+                  <label class="check">
+                    <input type="checkbox" bind:checked={entry.current} />
+                    Current role
+                  </label>
+                  <Field wide multiline label="Description" bind:value={entry.description} /><Field
                     wide
                     multiline
                     label="Highlights (one per line)"
-                    bind:value={entry.highlights}
-                  /><Field wide label="Tools" bind:value={entry.tools} />
+                    bind:value={entry.highlights} /><Field
+                    wide
+                    label="Tools"
+                    bind:value={entry.tools} />
                 </div>
               </article>{/each}<AddButton label="experience" onAdd={() => add('experience')} />
           {:else if activeSection === 'achievements'}
@@ -594,27 +605,25 @@
                   {index}
                   total={data.achievements.length}
                   onMove={(d) => move('achievements', index, d)}
-                  onRemove={() => remove('achievements', entry.id)}
-                />
+                  onRemove={() => remove('achievements', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Title"
                     required
                     path={`achievements.${entry.id}.title`}
                     error={fieldError(`achievements.${entry.id}.title`)}
-                    bind:value={entry.title}
-                  /><Field label="Category" bind:value={entry.category} /><Field
+                    bind:value={entry.title} /><Field
+                    label="Category"
+                    bind:value={entry.category} /><Field
                     label="Date"
-                    bind:value={entry.date}
-                  /><Field
+                    bind:value={entry.date} /><Field
                     wide
                     multiline
                     label="Description"
                     required
                     path={`achievements.${entry.id}.description`}
                     error={fieldError(`achievements.${entry.id}.description`)}
-                    bind:value={entry.description}
-                  />
+                    bind:value={entry.description} />
                 </div>
               </article>{/each}<AddButton label="achievement" onAdd={() => add('achievements')} />
           {:else if activeSection === 'skills'}
@@ -624,22 +633,19 @@
                   {index}
                   total={data.skills.length}
                   onMove={(d) => move('skills', index, d)}
-                  onRemove={() => remove('skills', entry.id)}
-                />
+                  onRemove={() => remove('skills', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Category"
                     required
                     path={`skills.${entry.id}.category`}
                     error={fieldError(`skills.${entry.id}.category`)}
-                    bind:value={entry.category}
-                  /><Field
+                    bind:value={entry.category} /><Field
                     label="Skills"
                     required
                     path={`skills.${entry.id}.skills`}
                     error={fieldError(`skills.${entry.id}.skills`)}
-                    bind:value={entry.skills}
-                  />
+                    bind:value={entry.skills} />
                 </div>
               </article>{/each}<AddButton label="skill category" onAdd={() => add('skills')} />
           {:else if activeSection === 'education'}
@@ -649,28 +655,25 @@
                   {index}
                   total={data.education.length}
                   onMove={(d) => move('education', index, d)}
-                  onRemove={() => remove('education', entry.id)}
-                />
+                  onRemove={() => remove('education', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Institution"
                     required
                     path={`education.${entry.id}.institution`}
                     error={fieldError(`education.${entry.id}.institution`)}
-                    bind:value={entry.institution}
-                  /><Field
+                    bind:value={entry.institution} /><Field
                     label="Qualification"
                     required
                     path={`education.${entry.id}.qualification`}
                     error={fieldError(`education.${entry.id}.qualification`)}
-                    bind:value={entry.qualification}
-                  /><Field label="Location" bind:value={entry.location} /><Field
+                    bind:value={entry.qualification} /><Field
+                    label="Location"
+                    bind:value={entry.location} /><Field
                     label="Start date"
-                    bind:value={entry.start}
-                  /><Field label="End date" bind:value={entry.end} /><Field
-                    label="GPA"
-                    bind:value={entry.gpa}
-                  />
+                    bind:value={entry.start} /><Field
+                    label="End date"
+                    bind:value={entry.end} /><Field label="GPA" bind:value={entry.gpa} />
                 </div>
               </article>{/each}<AddButton label="education" onAdd={() => add('education')} />
           {:else if activeSection === 'certificates'}
@@ -680,28 +683,24 @@
                   {index}
                   total={data.certificates.length}
                   onMove={(d) => move('certificates', index, d)}
-                  onRemove={() => remove('certificates', entry.id)}
-                />
+                  onRemove={() => remove('certificates', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Certificate"
                     required
                     path={`certificates.${entry.id}.name`}
                     error={fieldError(`certificates.${entry.id}.name`)}
-                    bind:value={entry.name}
-                  /><Field
+                    bind:value={entry.name} /><Field
                     label="Issuer"
                     required
                     path={`certificates.${entry.id}.issuer`}
                     error={fieldError(`certificates.${entry.id}.issuer`)}
-                    bind:value={entry.issuer}
-                  /><Field label="Date" bind:value={entry.date} /><Field
+                    bind:value={entry.issuer} /><Field label="Date" bind:value={entry.date} /><Field
                     label="Credential URL"
                     type="url"
                     path={`certificates.${entry.id}.credentialUrl`}
                     error={fieldError(`certificates.${entry.id}.credentialUrl`)}
-                    bind:value={entry.credentialUrl}
-                  />
+                    bind:value={entry.credentialUrl} />
                 </div>
               </article>{/each}<AddButton label="certificate" onAdd={() => add('certificates')} />
           {:else if activeSection === 'projects'}
@@ -711,58 +710,58 @@
                   {index}
                   total={data.projects.length}
                   onMove={(d) => move('projects', index, d)}
-                  onRemove={() => remove('projects', entry.id)}
-                />
+                  onRemove={() => remove('projects', entry.id)} />
                 <div class="form-grid">
                   <Field
                     label="Project name"
                     required
                     path={`projects.${entry.id}.name`}
                     error={fieldError(`projects.${entry.id}.name`)}
-                    bind:value={entry.name}
-                  /><Field label="Role" bind:value={entry.role} /><Field
+                    bind:value={entry.name} /><Field label="Role" bind:value={entry.role} /><Field
                     label="Dates"
-                    bind:value={entry.dates}
-                  /><Field
+                    bind:value={entry.dates} /><Field
                     label="URL"
                     type="url"
                     path={`projects.${entry.id}.url`}
                     error={fieldError(`projects.${entry.id}.url`)}
-                    bind:value={entry.url}
-                  /><Field
+                    bind:value={entry.url} /><Field
                     wide
                     multiline
                     label="Description"
                     path={`projects.${entry.id}.description`}
                     required
                     error={fieldError(`projects.${entry.id}.description`)}
-                    bind:value={entry.description}
-                  /><Field
+                    bind:value={entry.description} /><Field
                     wide
                     multiline
                     label="Highlights (one per line)"
-                    bind:value={entry.highlights}
-                  /><Field wide label="Tools" bind:value={entry.tools} />
+                    bind:value={entry.highlights} /><Field
+                    wide
+                    label="Tools"
+                    bind:value={entry.tools} />
                 </div>
               </article>{/each}<AddButton label="project" onAdd={() => add('projects')} />
           {/if}
 
           <footer
-            class="mt-10 flex items-center justify-between border-t border-[var(--rule)] pt-5"
-          >
+            class="mt-10 flex items-center justify-between border-t border-[var(--rule)] pt-5">
             <button
               class="text-button"
               type="button"
               on:click={() => go(-1)}
-              disabled={sectionIndex === 0}>← Previous</button
-            ><span class="font-mono text-[9px] text-[#88796d]"
-              >{sectionIndex + 1} / {SECTION_ORDER.length}</span
-            ><button
+              disabled={sectionIndex === 0}>
+              ← Previous
+            </button>
+            <span class="font-mono text-[9px] text-[#88796d]">
+              {sectionIndex + 1} / {SECTION_ORDER.length}
+            </span>
+            <button
               class="text-button"
               type="button"
               on:click={() => go(1)}
-              disabled={sectionIndex === SECTION_ORDER.length - 1}>Next →</button
-            >
+              disabled={sectionIndex === SECTION_ORDER.length - 1}>
+              Next →
+            </button>
           </footer>
         </div>
       </div>
@@ -770,8 +769,7 @@
 
     <section
       class={`relative flex min-h-0 flex-col bg-[#c5bbae] max-[900px]:h-full ${mobilePane !== 'preview' ? 'max-[900px]:hidden' : ''}`}
-      aria-label="Rendered preview"
-    >
+      aria-label="Rendered preview">
       {#if advanced}
         <div class="flex h-full min-h-0 flex-col bg-[#28231f] text-[#f0e8dc]">
           <div class="flex items-center justify-between border-b border-[#554a42] px-5 py-4">
@@ -786,13 +784,16 @@
                 class="source-action"
                 type="button"
                 on:click={copySource}
-                disabled={!lastGeneratedSource}>Copy</button
-              ><button
+                disabled={!lastGeneratedSource}>
+                Copy
+              </button>
+              <button
                 class="source-action"
                 type="button"
                 on:click={downloadText}
-                disabled={!lastGeneratedSource}>Download .tex</button
-              >
+                disabled={!lastGeneratedSource}>
+                Download .tex
+              </button>
             </div>
           </div>
           <pre
@@ -801,8 +802,7 @@
         </div>
       {:else}
         <div
-          class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(238,231,220,.62)] px-5 py-3"
-        >
+          class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(238,231,220,.62)] px-5 py-3">
           <div>
             <p class="m-0 font-mono text-[8px] uppercase tracking-[.15em] text-[#765443]">
               Output / proof
@@ -811,14 +811,15 @@
           </div>
           <div class="flex items-center gap-2">
             {#if state.lastSuccess && (dirty || state.status === 'failure')}<span
-                class="border border-[#a77560] bg-[rgba(247,237,226,0.5)] px-2 py-[5px] font-mono text-[8px] font-medium uppercase leading-none tracking-[0.1em] text-[#81513d]"
-                >Last successful proof</span
-              >{/if}
+                class="border border-[#a77560] bg-[rgba(247,237,226,0.5)] px-2 py-[5px] font-mono text-[8px] font-medium uppercase leading-none tracking-[0.1em] text-[#81513d]">
+                Last successful proof
+              </span>{/if}
             {#if state.lastSuccess?.representation === 'pdf'}<button
                 class="text-button"
                 type="button"
-                on:click={downloadPdf}>Download PDF</button
-              >{/if}
+                on:click={downloadPdf}>
+                Download PDF
+              </button>{/if}
           </div>
         </div>
         <div class="min-h-0 flex-1">
@@ -826,8 +827,7 @@
             {state}
             onDiagnosticSelect={() => {
               advanced = true;
-            }}
-          />
+            }} />
         </div>
       {/if}
     </section>

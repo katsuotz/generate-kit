@@ -1,5 +1,11 @@
 export type CvSectionId =
-  'summary' | 'experience' | 'achievements' | 'skills' | 'education' | 'certificates' | 'projects';
+  | 'summary'
+  | 'experience'
+  | 'achievements'
+  | 'skills'
+  | 'education'
+  | 'certificates'
+  | 'projects';
 
 export const SECTION_ORDER: CvSectionId[] = [
   'summary',

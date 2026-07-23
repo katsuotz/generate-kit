@@ -79,12 +79,10 @@
 <div
   class="grid w-[min(100%,820px)] justify-items-center gap-6"
   bind:this={host}
-  aria-label={pageCount ? `PDF preview, ${pageCount} pages` : 'PDF preview'}
->
+  aria-label={pageCount ? `PDF preview, ${pageCount} pages` : 'PDF preview'}>
   <div
     class="p-[18px] font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#74685e]"
-    aria-live="polite"
-  >
+    aria-live="polite">
     {renderError || 'Loading proof…'}
   </div>
 </div>
