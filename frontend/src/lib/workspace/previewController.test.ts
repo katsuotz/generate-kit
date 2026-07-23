@@ -20,16 +20,20 @@ describe('PreviewController', () => {
     const newRequest = controller.compile('new');
     adapter.requests[1].resolve({
       kind: 'success',
-      representation: 'html',
+      representation: 'pdf',
       source: 'new',
-      html: '<p>new</p>'
+      data: new Uint8Array([37, 80, 68, 70]).buffer,
+      artifactId: 'new-artifact',
+      pageCount: 1
     });
     await newRequest;
     adapter.requests[0].resolve({
       kind: 'success',
-      representation: 'html',
+      representation: 'pdf',
       source: 'old',
-      html: '<p>old</p>'
+      data: new Uint8Array([37, 80, 68, 70]).buffer,
+      artifactId: 'old-artifact',
+      pageCount: 1
     });
     await oldRequest;
 
@@ -44,9 +48,11 @@ describe('PreviewController', () => {
     const success = controller.compile('good');
     adapter.requests[0].resolve({
       kind: 'success',
-      representation: 'html',
+      representation: 'pdf',
       source: 'good',
-      html: '<p>proof</p>'
+      data: new Uint8Array([37, 80, 68, 70, 45, 49]).buffer,
+      artifactId: 'good-artifact',
+      pageCount: 1
     });
     await success;
     const failure = controller.compile('bad');
@@ -57,9 +63,9 @@ describe('PreviewController', () => {
     await failure;
 
     expect(latest?.status).toBe('failure');
-    expect(latest?.lastSuccess?.representation).toBe('html');
-    if (latest?.lastSuccess?.representation === 'html') {
-      expect(latest.lastSuccess.html).toBe('<p>proof</p>');
-    }
+    expect(latest?.lastSuccess?.artifactId).toBe('good-artifact');
+    expect(new Uint8Array(latest?.lastSuccess?.data ?? []).slice(0, 4)).toEqual(
+      new Uint8Array([37, 80, 68, 70])
+    );
   });
 });

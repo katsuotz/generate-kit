@@ -12,6 +12,7 @@ const POLL_TIMEOUT_MS = 60_000;
 export class BackendPreviewAdapter implements PreviewAdapter {
   private document: DocumentResponse | null = null;
   private activeJobId: string | null = null;
+  private renderId = 0;
 
   constructor(private readonly client: BackendClient) {}
 
@@ -26,6 +27,7 @@ export class BackendPreviewAdapter implements PreviewAdapter {
 
   async render(source: string, signal?: AbortSignal): Promise<PreviewResult> {
     if (!source.trim()) return { kind: 'empty' };
+    const renderId = ++this.renderId;
     this.document ??= await this.client.loadDocument(source);
 
     const document =
@@ -34,6 +36,10 @@ export class BackendPreviewAdapter implements PreviewAdapter {
         : await this.client.updateDocument(this.document.id, source, signal);
     this.document = document;
     const job = await this.client.createCompileJob(document.id, document.revision_id, signal);
+    if (renderId !== this.renderId || signal?.aborted) {
+      await this.cancelJob(job.id);
+      throw new DOMException('Preview cancelled', 'AbortError');
+    }
     this.activeJobId = job.id;
 
     try {
@@ -55,7 +61,8 @@ export class BackendPreviewAdapter implements PreviewAdapter {
         pageCount: completed.artifact.page_count
       };
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') await this.cancel();
+      if (error instanceof DOMException && error.name === 'AbortError')
+        await this.cancelJob(job.id);
       throw error;
     } finally {
       if (this.activeJobId === job.id) this.activeJobId = null;
@@ -63,9 +70,8 @@ export class BackendPreviewAdapter implements PreviewAdapter {
   }
 
   async cancel() {
-    if (!this.activeJobId) return;
-    await this.client.cancelCompileJob(this.activeJobId).catch(() => undefined);
-    this.activeJobId = null;
+    const jobId = this.activeJobId;
+    if (jobId) await this.cancelJob(jobId);
   }
 
   private async waitForCompletion(
@@ -78,13 +84,18 @@ export class BackendPreviewAdapter implements PreviewAdapter {
     while (job.status === 'queued' || job.status === 'running') {
       await abortableDelay(POLL_INTERVAL_MS, signal);
       if (Date.now() >= deadline) {
-        await this.cancel();
+        await this.cancelJob(job.id);
         throw new Error('Compilation timed out while waiting for the backend worker.');
       }
       job = await this.client.getCompileJob(job.id, signal);
     }
 
     return job;
+  }
+
+  private async cancelJob(jobId: string) {
+    await this.client.cancelCompileJob(jobId).catch(() => undefined);
+    if (this.activeJobId === jobId) this.activeJobId = null;
   }
 }
 

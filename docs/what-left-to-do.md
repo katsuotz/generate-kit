@@ -1,6 +1,6 @@
 # What’s left to do
 
-The frontend foundation and backend-backed preview flow are implemented in `frontend/` and `backend/`. The repository is a pnpm/Rust monorepo with root workspace metadata and `pnpm-lock.yaml`. The mock adapter remains available for deterministic UI tests; the XeLaTeX worker is opt-in through the backend environment.
+The frontend foundation and backend-backed preview flow are implemented in `frontend/` and `backend/`. The repository is a pnpm/Rust monorepo with root workspace metadata and `pnpm-lock.yaml`. Browser tests use a deterministic HTTP fixture for the backend PDF contract; the XeLaTeX worker is opt-in through the backend environment.
 
 ## Frontend foundation follow-up
 

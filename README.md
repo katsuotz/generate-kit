@@ -79,7 +79,7 @@ pnpm --dir frontend test:e2e
 pnpm --dir frontend build
 ```
 
-The normal frontend configuration uses the backend preview adapter. Playwright tests override `PUBLIC_PREVIEW_MODE` to use the deterministic mock adapter, so browser tests do not require a running compiler.
+The frontend always uses the backend preview adapter and renders returned PDF artifacts with PDF.js. Playwright starts a deterministic HTTP fixture that implements the backend contract and returns a valid PDF artifact, so browser tests do not require a running compiler.
 
 ## Backend commands
 

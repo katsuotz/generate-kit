@@ -12,16 +12,28 @@
   let renderId = 0;
   let document: PdfDocument | undefined;
   let loadingTask: PdfLoadingTask | undefined;
+  let renderError = '';
 
-  $: if (data) void renderPdf(data);
+  $: if (data) queueRender(data);
 
-  async function renderPdf(source: ArrayBuffer) {
+  function queueRender(source: ArrayBuffer) {
     const currentRender = ++renderId;
+    renderError = '';
+    void renderPdf(source, currentRender).catch((error) => {
+      if (currentRender !== renderId || isCancellation(error)) return;
+      renderError =
+        error instanceof Error ? error.message : 'The PDF proof could not be displayed.';
+    });
+  }
+
+  async function renderPdf(source: ArrayBuffer, currentRender: number) {
     const pdfjs = await import('pdfjs-dist');
     const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    if (currentRender !== renderId) return;
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
     await loadingTask?.destroy();
     await document?.cleanup();
+    if (currentRender !== renderId) return;
     document = undefined;
     loadingTask = undefined;
     host?.replaceChildren();
@@ -52,10 +64,15 @@
     }
   }
 
+  function isCancellation(error: unknown) {
+    if (!(error instanceof Error)) return false;
+    return /abort|cancel|destroy/i.test(`${error.name} ${error.message}`);
+  }
+
   onDestroy(() => {
     renderId += 1;
-    void loadingTask?.destroy();
-    void document?.cleanup();
+    void loadingTask?.destroy().catch(() => undefined);
+    void document?.cleanup().catch(() => undefined);
   });
 </script>
 
@@ -68,6 +85,6 @@
     class="p-[18px] font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#74685e]"
     aria-live="polite"
   >
-    Loading proof…
+    {renderError || 'Loading proof…'}
   </div>
 </div>

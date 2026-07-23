@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 
 test('has no automatically detectable accessibility violations', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Proof ready')).toBeVisible();
+  await expect(page.getByText('Not generated')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });

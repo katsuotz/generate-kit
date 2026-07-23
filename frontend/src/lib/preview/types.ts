@@ -9,13 +9,6 @@ export interface PreviewDiagnostic {
   file?: string;
 }
 
-export interface HtmlPreviewSuccess {
-  kind: 'success';
-  representation: 'html';
-  source: string;
-  html: string;
-}
-
 export interface PdfPreviewSuccess {
   kind: 'success';
   representation: 'pdf';
@@ -25,7 +18,7 @@ export interface PdfPreviewSuccess {
   pageCount: number | null;
 }
 
-export type PreviewSuccess = HtmlPreviewSuccess | PdfPreviewSuccess;
+export type PreviewSuccess = PdfPreviewSuccess;
 
 export interface PreviewEmpty {
   kind: 'empty';
