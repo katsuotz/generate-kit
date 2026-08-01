@@ -7,29 +7,19 @@
   export let onDiagnosticSelect: (line: number) => void;
 </script>
 
-<div class="flex h-full min-h-0 flex-col" aria-label="Rendered document preview">
+<div class="preview-root" aria-label="Rendered document preview">
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div
-    class="relative flex min-h-0 flex-1 items-start justify-center overflow-auto p-[clamp(24px,4vw,54px)] outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#a65333] max-[800px]:p-3.5"
-    tabindex="0"
-    role="region"
-    aria-label="Preview scroll area">
+  <div class="preview-scroll" tabindex="0" role="region" aria-label="Preview scroll area">
     {#if state.status === 'loading'}
       {#if state.lastSuccess}
         <PdfPreview
           data={state.lastSuccess.data.slice(0)}
           pageCount={state.lastSuccess.pageCount} />
       {/if}
-      <div
-        class="absolute inset-0 z-[3] grid place-content-center justify-items-center gap-[15px] bg-[rgba(205,196,183,0.8)] text-[#564a40] backdrop-blur-[2px]"
-        role="status"
-        aria-live="polite">
-        <span
-          class="grid h-[53px] w-[53px] place-items-center rounded-full border border-[#a45a3b] text-[#91472c] animate-[breathe_1.2s_ease-in-out_infinite]"
-          aria-hidden="true">
-          ∴
-        </span>
-        <p class="m-0 text-[17px] italic">Setting the type…</p>
+      <div class="preview-loading" role="status" aria-live="polite">
+        <span class="loading-mark" aria-hidden="true"></span>
+        <strong>Setting the proof</strong>
+        <span>Compiling the latest source…</span>
       </div>
     {:else if state.status === 'failure'}
       {#if state.lastSuccess}
@@ -37,32 +27,118 @@
           data={state.lastSuccess.data.slice(0)}
           pageCount={state.lastSuccess.pageCount} />
       {:else}
-        <div class="m-auto max-w-[300px] self-center text-center text-[#51473f]" role="status">
-          <span class="mb-4 block text-5xl text-[#9e5134] opacity-70" aria-hidden="true">!</span>
-          <h3 class="mb-2 mt-0 text-[25px] font-medium text-[#3c332c]">Proof paused.</h3>
-          <p class="m-0 leading-[1.5]">Resolve the note below, then preview again.</p>
+        <div class="preview-empty is-error" role="status">
+          <span class="empty-mark" aria-hidden="true">!</span>
+          <h3>Proof needs attention</h3>
+          <p>Use the compiler notes below to resolve the issue, then generate again.</p>
         </div>
       {/if}
-    {:else if state.status === 'empty'}
-      <div class="m-auto max-w-[300px] self-center text-center text-[#51473f]" role="status">
-        <span class="mb-4 block text-5xl text-[#9e5134] opacity-70" aria-hidden="true">∅</span>
-        <h3 class="mb-2 mt-0 text-[25px] font-medium text-[#3c332c]">No proof yet.</h3>
-        <p class="m-0 leading-[1.5]">
-          Complete the required identity fields, then choose Generate CV to make the first proof.
-        </p>
-      </div>
     {:else if state.lastSuccess}
       <PdfPreview data={state.lastSuccess.data.slice(0)} pageCount={state.lastSuccess.pageCount} />
     {:else}
-      <div class="m-auto max-w-[300px] self-center text-center text-[#51473f]" role="status">
-        <span class="mb-4 block text-5xl text-[#9e5134] opacity-70" aria-hidden="true">∅</span>
-        <h3 class="mb-2 mt-0 text-[25px] font-medium text-[#3c332c]">No proof yet.</h3>
-        <p class="m-0 leading-[1.5]">
-          Complete the required identity fields, then choose Generate CV to make the first proof.
-        </p>
+      <div class="preview-empty" role="status">
+        <span class="empty-mark" aria-hidden="true">—</span>
+        <h3>No proof yet</h3>
+        <p>Generate your CV to turn the structured form into a rendered document.</p>
       </div>
     {/if}
   </div>
 
   <Diagnostics diagnostics={state.diagnostics} onSelect={onDiagnosticSelect} />
 </div>
+
+<style>
+  .preview-root {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .preview-scroll {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: auto;
+    padding: clamp(24px, 4vw, 48px);
+    outline: none;
+  }
+
+  .preview-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 7px;
+    background: rgb(229 234 240 / 82%);
+    color: var(--ink);
+    backdrop-filter: blur(2px);
+  }
+
+  .preview-loading strong {
+    font-size: 16px;
+  }
+
+  .preview-loading span:last-child {
+    color: var(--muted-ink);
+    font-size: 13px;
+  }
+
+  .loading-mark {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #b8cde9;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .preview-empty {
+    max-width: 300px;
+    align-self: center;
+    margin: auto;
+    text-align: center;
+  }
+
+  .empty-mark {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    margin: 0 auto 14px;
+    place-items: center;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    color: var(--blue);
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+
+  .preview-empty.is-error .empty-mark {
+    border-color: #efc3bf;
+    color: var(--danger);
+  }
+
+  .preview-empty h3 {
+    margin: 0 0 7px;
+    color: var(--ink);
+    font-size: 19px;
+  }
+
+  .preview-empty p {
+    margin: 0;
+    color: var(--muted-ink);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 560px) {
+    .preview-scroll {
+      padding: 14px;
+    }
+  }
+</style>

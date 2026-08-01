@@ -39,14 +39,14 @@
     certificates: 'Credentials that support your practice.',
     projects: 'Selected work beyond your role history.'
   };
-  const inputClass =
-    'w-full border-0 border-b border-[var(--rule)] bg-transparent px-0 py-2 text-[17px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a8f84] focus:border-[var(--copper)]';
-  const textareaClass = `${inputClass} min-h-[92px] resize-y leading-[1.45]`;
+  const inputClass = 'cv-input';
+  const textareaClass = 'cv-input cv-textarea';
 
   let data: CvData = blankCv();
   let templateId = templates[0].id;
   let activeSection: CvSectionId = 'summary';
   let mobilePane: 'form' | 'preview' = 'form';
+  let presentation: 'intake' | 'workspace' = 'intake';
   let advanced = false;
   let lastGeneratedSource = '';
   let generatedFingerprint = '';
@@ -154,6 +154,8 @@
       lastGeneratedSource = generateCv(data, templateId, date);
       generatedAt = date.toISOString();
       generatedFingerprint = currentFingerprint;
+      presentation = 'workspace';
+      mobilePane = 'preview';
       const saved = persist();
       notice = saved
         ? 'Source generated. Setting the proof…'
@@ -238,6 +240,7 @@
       lastGeneratedSource = saved.lastGeneratedSource;
       generatedAt = saved.generatedAt;
       generatedFingerprint = saved.fingerprint;
+      if (saved.lastGeneratedSource) presentation = 'workspace';
     }
     void (async () => {
       try {
@@ -283,84 +286,81 @@
     }
   }} />
 
-<main
-  class="grid h-screen min-h-0 grid-rows-[74px_minmax(0,1fr)] bg-[#d7cfc3] bg-[image:var(--workspace-texture)] max-[900px]:grid-rows-[68px_46px_minmax(0,1fr)]">
-  <header
-    class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(245,240,231,.92)] px-7 max-[900px]:px-4">
-    <div class="flex items-baseline gap-4">
-      <h1 class="m-0 text-[27px] font-semibold tracking-[-.025em]">Marginalia</h1>
-      <span
-        class="font-mono text-[9px] uppercase tracking-[.18em] text-[#8b5d49] max-[560px]:hidden">
-        Career dossier
-      </span>
+<main class={`workspace-shell ${presentation === 'workspace' ? 'is-workspace' : 'is-intake'}`}>
+  <header class="workspace-header">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">M</div>
+      <div>
+        <h1>Marginalia</h1>
+        <p>{presentation === 'intake' ? 'CV builder' : 'Proof workspace'}</p>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="header-actions">
       <span
-        class="font-mono text-[9px] uppercase tracking-[.1em] text-[#766b61] max-[650px]:hidden">
+        class="proof-status"
+        class:is-loading={state.status === 'loading'}
+        class:is-success={state.status === 'success' && !dirty}
+        class:is-stale={dirty && !!lastGeneratedSource}
+        class:is-failure={state.status === 'failure'}
+        role="status">
         {state.status === 'loading'
-          ? 'Setting proof…'
+          ? 'Setting proof'
           : dirty && lastGeneratedSource
             ? 'Proof outdated'
             : state.status === 'success'
               ? 'Proof ready'
-              : 'Not generated'}
+              : 'Ready to start'}
       </span>
+      {#if presentation === 'workspace'}<button
+          class="button button-secondary source-toggle"
+          type="button"
+          on:click={toggleAdvanced}
+          aria-pressed={advanced}>
+          Source
+        </button>{/if}
       <button
-        class="border border-[#8a7568] px-3 py-2 font-mono text-[9px] uppercase tracking-[.1em] hover:bg-[#eee4d8]"
-        type="button"
-        on:click={toggleAdvanced}
-        aria-pressed={advanced}>
-        Source
-      </button>
-      <button
-        class="bg-[var(--copper)] px-4 py-[10px] font-mono text-[10px] font-medium uppercase tracking-[.12em] text-white hover:bg-[var(--copper-dark)] disabled:opacity-50"
+        class="button button-primary generate-button"
         type="button"
         on:click={generate}
         disabled={!controllerReady || state.status === 'loading'}>
-        Generate CV
+        {state.status === 'loading' ? 'Generating…' : 'Generate CV'}
       </button>
     </div>
   </header>
-  <nav
-    class="hidden grid-cols-2 border-b border-[var(--rule)] bg-[#eee7dc] max-[900px]:grid"
-    aria-label="Workspace view">
-    <button
-      type="button"
-      aria-pressed={mobilePane === 'form'}
-      class:active-tab={mobilePane === 'form'}
-      on:click={() => (mobilePane = 'form')}>
-      Form
-    </button>
-    <button
-      type="button"
-      aria-pressed={mobilePane === 'preview'}
-      class:active-tab={mobilePane === 'preview'}
-      on:click={() => (mobilePane = 'preview')}>
-      Preview
-    </button>
-  </nav>
+  {#if presentation === 'workspace'}<nav class="mobile-pane-nav" aria-label="Workspace view">
+      <button
+        type="button"
+        aria-pressed={mobilePane === 'form'}
+        class:active-tab={mobilePane === 'form'}
+        on:click={() => (mobilePane = 'form')}>
+        Form
+      </button>
+      <button
+        type="button"
+        aria-pressed={mobilePane === 'preview'}
+        class:active-tab={mobilePane === 'preview'}
+        on:click={() => (mobilePane = 'preview')}>
+        Preview
+        {#if state.diagnostics.length}<span class="tab-count">{state.diagnostics.length}</span>{/if}
+      </button>
+    </nav>{/if}
 
-  <div class="grid min-h-0 grid-cols-[minmax(520px,56%)_minmax(360px,44%)] max-[900px]:block">
+  <div class="workspace-content">
     <section
-      class={`grid min-h-0 grid-cols-[185px_minmax(0,1fr)] border-r border-[var(--rule)] bg-[rgba(246,241,233,.94)] max-[900px]:h-full max-[900px]:grid-cols-1 ${mobilePane !== 'form' ? 'max-[900px]:hidden' : ''}`}
+      class={`form-panel ${presentation === 'intake' ? 'intake-panel' : ''} ${mobilePane !== 'form' ? 'mobile-hidden' : ''}`}
       aria-label="CV form builder">
-      <nav
-        class="border-r border-[var(--rule)] bg-[rgba(232,224,212,.55)] px-4 py-8 max-[900px]:hidden"
-        aria-label="CV sections">
-        <p class="mb-5 px-2 font-mono text-[9px] uppercase tracking-[.16em] text-[#8a7769]">
-          Dossier / 01—07
-        </p>
+      <nav class="section-rail" aria-label="CV sections">
+        <p class="rail-label">Your CV</p>
         {#each SECTION_ORDER as section, index}
           <button
             type="button"
             on:click={() => (activeSection = section)}
             aria-current={activeSection === section ? 'step' : undefined}
-            class="mb-1 flex w-full items-center justify-between border-l-2 px-3 py-3 text-left text-[16px] transition-colors"
-            class:border-[var(--copper)]={activeSection === section}
-            class:border-transparent={activeSection !== section}
-            class:bg-[rgba(255,255,255,.45)]={activeSection === section}>
+            class="section-nav-button"
+            class:is-active={activeSection === section}
+            class:has-error={sectionErrors(section) > 0}>
             <span>{labels[section]}</span>
-            <span class="font-mono text-[8px] text-[#8c7a6e]">
+            <span class="section-index">
               {sectionErrors(section)
                 ? `!${sectionErrors(section)}`
                 : String(index + 1).padStart(2, '0')}
@@ -369,28 +369,38 @@
         {/each}
       </nav>
 
-      <div
-        class="builder-scroll min-h-0 overflow-y-auto px-[clamp(24px,4vw,58px)] py-9"
-        on:input={changed}>
-        <div class="mx-auto max-w-[720px]">
-          <p class="mb-2 font-mono text-[9px] uppercase tracking-[.17em] text-[var(--copper)]">
-            Section {String(sectionIndex + 1).padStart(2, '0')} / 07
-          </p>
-          <h2
-            class="mb-1 mt-0 text-[clamp(34px,4vw,48px)] font-medium leading-none tracking-[-.03em]">
-            {labels[activeSection]}
-          </h2>
-          <p class="mb-9 mt-2 text-[17px] italic text-[#776a60]">{descriptions[activeSection]}</p>
+      <div class="builder-scroll" on:input={changed}>
+        <div class="form-content">
+          <div class="form-heading">
+            <p class="section-kicker">Section {sectionIndex + 1} of {SECTION_ORDER.length}</p>
+            <h2>
+              {presentation === 'intake' && activeSection === 'summary'
+                ? 'Start with the essentials'
+                : labels[activeSection]}
+            </h2>
+            <p>
+              {presentation === 'intake' && activeSection === 'summary'
+                ? 'Add the details that make your CV yours. You can fill the rest in as you go.'
+                : descriptions[activeSection]}
+            </p>
+          </div>
+          {#if presentation === 'intake' && activeSection === 'summary'}<div class="intake-guide">
+              <span class="guide-mark" aria-hidden="true">1</span>
+              <div>
+                <strong>Start with the details employers need first.</strong>
+                <span>
+                  Fields marked <b aria-hidden="true">*</b>
+                  are required. Add an email, phone number, or profile link so people can reach you.
+                </span>
+              </div>
+            </div>{/if}
           {#if errors.length}
-            <p
-              class="mb-4 font-mono text-[9px] uppercase tracking-[.08em] text-[#923b2d]"
-              role="alert">
+            <p class="form-alert" role="alert">
+              <strong>Review this section.</strong>
               {errors[0].message}
             </p>
           {/if}
-          {#if notice}<p
-              class="mb-7 border-l-2 border-[var(--copper)] bg-[#efe5d9] px-4 py-3 text-[14px]"
-              role="status">
+          {#if notice}<p class="notice" role="status">
               {notice}
             </p>{/if}
 
@@ -743,8 +753,7 @@
               </article>{/each}<AddButton label="project" onAdd={() => add('projects')} />
           {/if}
 
-          <footer
-            class="mt-10 flex items-center justify-between border-t border-[var(--rule)] pt-5">
+          <footer class="section-footer">
             <button
               class="text-button"
               type="button"
@@ -752,7 +761,7 @@
               disabled={sectionIndex === 0}>
               ← Previous
             </button>
-            <span class="font-mono text-[9px] text-[#88796d]">
+            <span class="page-count">
               {sectionIndex + 1} / {SECTION_ORDER.length}
             </span>
             <button
@@ -767,70 +776,64 @@
       </div>
     </section>
 
-    <section
-      class={`relative flex min-h-0 flex-col bg-[#c5bbae] max-[900px]:h-full ${mobilePane !== 'preview' ? 'max-[900px]:hidden' : ''}`}
-      aria-label="Rendered preview">
-      {#if advanced}
-        <div class="flex h-full min-h-0 flex-col bg-[#28231f] text-[#f0e8dc]">
-          <div class="flex items-center justify-between border-b border-[#554a42] px-5 py-4">
+    {#if presentation === 'workspace'}<section
+        class={`preview-panel ${mobilePane !== 'preview' ? 'mobile-hidden' : ''}`}
+        aria-label="Rendered preview">
+        {#if advanced}
+          <div class="source-panel">
+            <div class="source-header">
+              <div>
+                <p class="panel-kicker">Generated source</p>
+                <h2>LaTeX source</h2>
+              </div>
+              <div class="source-actions">
+                <button
+                  class="source-action button button-secondary"
+                  type="button"
+                  on:click={copySource}
+                  disabled={!lastGeneratedSource}>
+                  Copy
+                </button>
+                <button
+                  class="source-action button button-secondary"
+                  type="button"
+                  on:click={downloadText}
+                  disabled={!lastGeneratedSource}>
+                  Download .tex
+                </button>
+              </div>
+            </div>
+            <pre class="source-code">{lastGeneratedSource ||
+                'Generate your CV to inspect its exact LaTeX source.'}</pre>
+          </div>
+        {:else}
+          <div class="preview-header">
             <div>
-              <p class="m-0 font-mono text-[9px] uppercase tracking-[.15em] text-[#cf8a6b]">
-                Advanced / generated
-              </p>
-              <h2 class="m-0 text-2xl">LaTeX source</h2>
+              <p class="panel-kicker">Rendered proof</p>
+              <h2>Preview</h2>
             </div>
-            <div class="flex gap-2">
-              <button
-                class="source-action"
-                type="button"
-                on:click={copySource}
-                disabled={!lastGeneratedSource}>
-                Copy
-              </button>
-              <button
-                class="source-action"
-                type="button"
-                on:click={downloadText}
-                disabled={!lastGeneratedSource}>
-                Download .tex
-              </button>
+            <div class="preview-actions">
+              {#if state.lastSuccess && (dirty || state.status === 'failure')}<span
+                  class="proof-badge is-stale">
+                  Last successful proof
+                </span>{/if}
+              {#if state.lastSuccess?.representation === 'pdf'}<button
+                  class="text-button"
+                  type="button"
+                  on:click={downloadPdf}>
+                  Download PDF
+                </button>{/if}
             </div>
           </div>
-          <pre
-            class="m-0 min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-6 font-mono text-[11px] leading-[1.65]">{lastGeneratedSource ||
-              'Generate your CV to inspect its exact LaTeX source.'}</pre>
-        </div>
-      {:else}
-        <div
-          class="flex items-center justify-between border-b border-[var(--rule)] bg-[rgba(238,231,220,.62)] px-5 py-3">
-          <div>
-            <p class="m-0 font-mono text-[8px] uppercase tracking-[.15em] text-[#765443]">
-              Output / proof
-            </p>
-            <span class="text-xl">Preview</span>
+          <div class="min-h-0 flex-1">
+            <PreviewPane
+              {state}
+              onDiagnosticSelect={() => {
+                advanced = true;
+              }} />
           </div>
-          <div class="flex items-center gap-2">
-            {#if state.lastSuccess && (dirty || state.status === 'failure')}<span
-                class="border border-[#a77560] bg-[rgba(247,237,226,0.5)] px-2 py-[5px] font-mono text-[8px] font-medium uppercase leading-none tracking-[0.1em] text-[#81513d]">
-                Last successful proof
-              </span>{/if}
-            {#if state.lastSuccess?.representation === 'pdf'}<button
-                class="text-button"
-                type="button"
-                on:click={downloadPdf}>
-                Download PDF
-              </button>{/if}
-          </div>
-        </div>
-        <div class="min-h-0 flex-1">
-          <PreviewPane
-            {state}
-            onDiagnosticSelect={() => {
-              advanced = true;
-            }} />
-        </div>
-      {/if}
-    </section>
+        {/if}
+      </section>{/if}
   </div>
   <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
     {state.status === 'loading'
@@ -844,83 +847,746 @@
 </main>
 
 <style>
+  :global(html) {
+    background: var(--canvas);
+  }
+
+  .workspace-shell {
+    display: grid;
+    grid-template-rows: 72px minmax(0, 1fr);
+    height: 100vh;
+    min-height: 0;
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  .workspace-shell.is-workspace {
+    grid-template-rows: 72px minmax(0, 1fr);
+  }
+
+  .workspace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .brand-lockup,
+  .header-actions,
+  .preview-actions,
+  .source-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .brand-lockup {
+    gap: 12px;
+  }
+
+  .brand-mark {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid var(--blue);
+    color: var(--blue);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+  }
+
+  .brand-lockup h1,
+  .brand-lockup p,
+  .form-heading h2,
+  .form-heading p,
+  .preview-header h2,
+  .preview-header p,
+  .source-header h2,
+  .source-header p {
+    margin: 0;
+  }
+
+  .brand-lockup h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-lockup p,
+  .panel-kicker,
+  .section-kicker,
+  .rail-label,
+  .section-index,
+  .page-count,
+  .proof-status,
+  :global(label > span),
+  :global(.form-label) {
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .brand-lockup p {
+    margin-top: 3px;
+    color: var(--quiet-ink);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+  }
+
+  .header-actions {
+    gap: 12px;
+  }
+
+  .proof-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .proof-status::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--quiet-ink);
+    content: '';
+  }
+
+  .proof-status.is-loading::before {
+    background: var(--blue);
+    animation: spin 0.8s linear infinite;
+  }
+
+  .proof-status.is-success::before {
+    background: var(--success);
+  }
+
+  .proof-status.is-stale::before,
+  .proof-status.is-failure::before {
+    background: var(--danger);
+  }
+
+  .button {
+    min-height: 36px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 0 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .button:disabled,
+  :global(.text-button:disabled),
+  :global(.source-action:disabled) {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .button-primary {
+    background: var(--blue);
+    color: #fff;
+  }
+
+  .button-primary:hover:not(:disabled) {
+    background: var(--blue-dark);
+    transform: translateY(-1px);
+  }
+
+  .button-secondary {
+    border-color: var(--rule-strong);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .button-secondary:hover:not(:disabled) {
+    border-color: var(--blue);
+    color: var(--blue-dark);
+  }
+
+  .mobile-pane-nav {
+    display: none;
+    grid-template-columns: repeat(2, 1fr);
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-subtle);
+  }
+
+  .mobile-pane-nav button {
+    position: relative;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .mobile-pane-nav button.active-tab {
+    color: var(--blue-dark);
+  }
+
+  .mobile-pane-nav button.active-tab::after {
+    position: absolute;
+    right: 24%;
+    bottom: -1px;
+    left: 24%;
+    height: 2px;
+    background: var(--blue);
+    content: '';
+  }
+
+  .tab-count {
+    display: inline-grid;
+    min-width: 17px;
+    height: 17px;
+    margin-left: 5px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    font-size: 9px;
+  }
+
+  .workspace-content {
+    display: grid;
+    min-height: 0;
+    grid-template-columns: minmax(520px, 56%) minmax(360px, 44%);
+  }
+
+  .is-intake .workspace-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-panel {
+    display: grid;
+    min-height: 0;
+    grid-template-columns: 190px minmax(0, 1fr);
+    border-right: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .intake-panel .builder-scroll {
+    background: var(--surface);
+  }
+
+  .section-rail {
+    padding: 27px 14px;
+    border-right: 1px solid var(--rule);
+    background: var(--surface-subtle);
+  }
+
+  .rail-label {
+    margin: 0 10px 15px;
+    color: var(--quiet-ink);
+    font-size: 9px;
+  }
+
+  .section-nav-button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    border: 0;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+    padding: 11px 10px;
+    background: transparent;
+    color: var(--muted-ink);
+    font-size: 14px;
+    text-align: left;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .section-nav-button:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .section-nav-button.is-active {
+    border-left-color: var(--blue);
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    font-weight: 650;
+  }
+
+  .section-nav-button.has-error .section-index {
+    color: var(--danger);
+  }
+
+  .section-index {
+    color: var(--quiet-ink);
+    font-size: 9px;
+  }
+
+  .builder-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 44px clamp(28px, 5vw, 84px) 52px;
+  }
+
+  .form-content {
+    width: min(100%, 760px);
+    margin: 0 auto;
+  }
+
+  .form-heading {
+    margin-bottom: 30px;
+  }
+
+  .section-kicker,
+  .panel-kicker {
+    margin-bottom: 10px !important;
+    color: var(--blue-dark);
+    font-size: 9px;
+  }
+
+  .form-heading h2 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.08;
+  }
+
+  .form-heading p:not(.section-kicker) {
+    max-width: 52ch;
+    margin-top: 10px;
+    color: var(--muted-ink);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .intake-guide {
+    display: flex;
+    gap: 13px;
+    margin-bottom: 28px;
+    border: 1px solid #c9dafa;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    animation: reveal 220ms ease-out both;
+  }
+
+  .guide-mark {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  .intake-guide strong,
+  .intake-guide span {
+    display: block;
+  }
+
+  .intake-guide strong {
+    font-size: 13px;
+  }
+
+  .intake-guide span {
+    margin-top: 3px;
+    color: #315a91;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .form-alert,
+  .notice {
+    margin: 0 0 24px;
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .form-alert {
+    border-color: #efc3bf;
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .notice {
+    background: var(--surface-subtle);
+    color: var(--muted-ink);
+  }
+
   :global(label > span),
   :global(.form-label) {
     display: block;
-    font-family: 'DM Mono', monospace;
+    margin-bottom: 7px;
+    color: var(--muted-ink);
     font-size: 9px;
-    font-weight: 500;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    color: #75675d;
   }
+
+  :global(label > span b) {
+    color: var(--blue);
+  }
+
+  :global(.cv-input) {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    padding: 9px 11px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.4;
+    outline: none;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+
+  :global(.cv-input::placeholder) {
+    color: #8b98a4;
+  }
+
+  :global(.cv-input:focus) {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgb(23 105 210 / 14%);
+  }
+
+  :global(.cv-input:disabled) {
+    background: var(--surface-subtle);
+    color: var(--quiet-ink);
+  }
+
+  :global(.cv-textarea) {
+    min-height: 96px;
+    resize: vertical;
+  }
+
   :global(.field-error) {
     display: block;
-    margin-top: 5px;
-    color: #9c352a;
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
+    margin-top: 6px;
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.4;
   }
+
   :global(.entry-card) {
     margin-bottom: 18px;
-    padding: 20px;
     border: 1px solid var(--rule);
-    background: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 22px rgba(60, 45, 35, 0.04);
+    border-radius: 8px;
+    padding: 18px;
+    background: var(--surface-raised);
   }
+
+  :global(.entry-head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 12px;
+  }
+
+  :global(.entry-head h3) {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  :global(.add-button) {
+    width: 100%;
+    margin-bottom: 18px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 7px;
+    padding: 13px 16px;
+    background: transparent;
+    color: var(--blue-dark);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  :global(.add-button:hover) {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+  }
+
   :global(.form-grid) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 26px;
+    gap: 20px 22px;
   }
+
   :global(.text-button),
   :global(.source-action) {
     border: 0;
     background: transparent;
-    padding: 7px 9px;
-    color: var(--copper-dark);
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    padding: 7px 8px;
+    color: var(--blue-dark);
     cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
-  :global(.text-button:disabled),
-  :global(.source-action:disabled) {
-    opacity: 0.35;
-    cursor: default;
+
+  :global(.text-button:hover),
+  :global(.source-action:hover) {
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
+
   :global(.remove-button) {
     align-self: center;
     border: 0;
     background: transparent;
-    color: #8c4e38;
-    font-size: 25px;
+    color: var(--danger);
     cursor: pointer;
+    font-size: 22px;
   }
+
   :global(.source-action) {
-    border: 1px solid #75665d;
-    color: #f0e8dc;
+    min-height: 34px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    color: var(--ink);
   }
+
   :global(.check) {
     align-self: end;
     padding: 10px 0;
-    font-family: 'DM Mono', monospace;
+    color: var(--muted-ink);
+    font-family: var(--mono);
     font-size: 10px;
   }
-  .active-tab {
-    border-bottom: 2px solid var(--copper);
-    color: var(--copper-dark);
+
+  .section-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 34px;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
   }
-  nav button {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
+
+  .page-count {
+    color: var(--quiet-ink);
+    font-size: 9px;
+  }
+
+  .preview-panel {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    background: #e5eaf0;
+  }
+
+  .preview-header,
+  .source-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px;
+    background: var(--surface-subtle);
+  }
+
+  .preview-header h2,
+  .source-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .preview-actions,
+  .source-actions {
+    gap: 10px;
+  }
+
+  .proof-badge {
+    border: 1px solid var(--rule-strong);
+    border-radius: 5px;
+    padding: 6px 8px;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
   }
+
+  .proof-badge.is-stale {
+    border-color: #e8c57f;
+    background: var(--warning-soft);
+    color: var(--warning);
+  }
+
+  .source-panel {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    background: #18222d;
+    color: #f1f5f8;
+  }
+
+  .source-panel .source-header {
+    border-color: #354554;
+    background: #202d39;
+  }
+
+  .source-panel .panel-kicker {
+    color: #9bbbe7;
+  }
+
+  .source-panel .source-header h2 {
+    color: #fff;
+  }
+
+  .source-panel :global(.source-action) {
+    border-color: #66798a;
+    background: transparent;
+    color: #e8f1ff;
+  }
+
+  .source-code {
+    min-height: 0;
+    flex: 1;
+    margin: 0;
+    overflow: auto;
+    padding: 22px;
+    color: #d5e2ee;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  :global(label > span),
+  :global(.form-label) {
+    font-family: var(--mono);
+  }
+
   @media (max-width: 620px) {
     :global(.form-grid) {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .workspace-shell.is-workspace {
+      grid-template-rows: 68px 44px minmax(0, 1fr);
+    }
+
+    .mobile-pane-nav {
+      display: grid;
+    }
+
+    .mobile-hidden {
+      display: none !important;
+    }
+
+    .workspace-content {
+      display: block;
+    }
+
+    .form-panel {
+      display: grid;
+      height: 100%;
+      grid-template-columns: 1fr;
+      border-right: 0;
+    }
+
+    .section-rail {
+      display: none;
+    }
+
+    .preview-panel {
+      height: 100%;
+    }
+
+    .workspace-header {
+      padding: 0 16px;
+    }
+
+    .builder-scroll {
+      padding: 32px 24px 44px;
+    }
+
+    .form-content {
+      width: min(100%, 700px);
+    }
+
+    .proof-status {
+      display: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .header-actions {
+      gap: 7px;
+    }
+
+    .source-toggle {
+      display: none;
+    }
+
+    .generate-button {
+      padding: 0 11px;
+      font-size: 9px;
+    }
+
+    .builder-scroll {
+      padding: 28px 16px 36px;
+    }
+
+    .form-heading h2 {
+      font-size: 30px;
+    }
+
+    .preview-header,
+    .source-header {
+      align-items: flex-start;
+      flex-direction: column;
+      padding: 13px 16px;
+    }
+
+    .preview-actions,
+    .source-actions {
+      width: 100%;
+      justify-content: space-between;
     }
   }
 </style>

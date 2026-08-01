@@ -7,17 +7,23 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('starts blank, validates, and generates only on request', async ({ page }) => {
-  await expect(page.getByText('Not generated')).toBeVisible();
+test('starts in focused intake, validates, and reveals the proof workspace on request', async ({
+  page
+}) => {
+  await expect(page.getByText('Ready to start')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download PDF' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Rendered preview' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
   await page.getByRole('button', { name: 'Generate CV' }).click();
   await expect(page.getByRole('alert')).toContainText('Full name is required.');
+  await expect(page.getByRole('region', { name: 'Rendered preview' })).toHaveCount(0);
+  await expect(page.getByLabel(/Full name/)).toBeFocused();
   await page.getByLabel(/Full name/).fill('Ada Lovelace');
   await page.getByLabel('Email').fill('ada@example.com');
-  await expect(page.getByText('Not generated')).toBeVisible();
+  await expect(page.getByText('Ready to start')).toBeVisible();
   await page.getByRole('button', { name: 'Generate CV' }).click();
   await expect(page.getByLabel('PDF page 1')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Rendered preview' })).toBeVisible();
   await expect(page.getByText('CV generated and proof ready.')).toBeVisible();
   await page.getByLabel(/Full name/).fill('Ada King');
   await expect(page.getByText('Proof outdated')).toBeVisible();
@@ -54,6 +60,19 @@ test('keeps the last backend PDF visible when compilation fails', async ({ page 
   await expect(page.getByText('Last successful proof')).toBeVisible();
 });
 
+test('opens the proof workspace with actionable diagnostics on a first-run failure', async ({
+  page
+}) => {
+  await page.getByLabel(/Full name/).fill('E2E COMPILE FAILURE');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
+  await expect(page.getByRole('region', { name: 'Rendered preview' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Compiler notes' })).toContainText(
+    'Fixture compiler rejected this source.'
+  );
+  await expect(page.getByText('Proof needs attention')).toBeVisible();
+});
+
 test('moves between form sections and exposes exact source actions', async ({ page }) => {
   await page.getByLabel(/Full name/).fill('Ada Lovelace');
   await page.getByLabel('Email').fill('ada@example.com');
@@ -65,8 +84,13 @@ test('moves between form sections and exposes exact source actions', async ({ pa
 
 test('keeps form and preview navigation usable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+  await page.getByLabel(/Full name/).fill('Ada Lovelace');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Rendered preview' })).toBeVisible();
+  await expect(page.getByLabel('PDF page 1')).toBeVisible();
   await page.getByRole('button', { name: 'Form', exact: true }).click();
   await expect(page.getByRole('region', { name: 'CV form builder' })).toBeVisible();
   await page.getByRole('button', { name: /Next/ }).click();
@@ -75,10 +99,46 @@ test('keeps form and preview navigation usable on mobile', async ({ page }) => {
 
 test('switches to the single-pane layout before desktop columns can overflow', async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 900 });
+  await page.getByLabel(/Full name/).fill('Ada Lovelace');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
   await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(820);
   await page.getByRole('button', { name: 'Source' }).click();
   await expect(page.getByRole('heading', { name: 'LaTeX source' })).toBeVisible();
+});
+
+test('fills the desktop proof workspace below the header', async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1080 });
+  await page.getByLabel(/Full name/).fill('Ada Lovelace');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
+  await expect(page.getByLabel('PDF page 1')).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const content = document.querySelector<HTMLElement>('.workspace-content');
+    const form = document.querySelector<HTMLElement>('.form-panel');
+    const preview = document.querySelector<HTMLElement>('.preview-panel');
+    return {
+      contentHeight: content?.getBoundingClientRect().height ?? 0,
+      formHeight: form?.getBoundingClientRect().height ?? 0,
+      previewHeight: preview?.getBoundingClientRect().height ?? 0
+    };
+  });
+
+  expect(layout.contentHeight).toBeGreaterThan(900);
+  expect(layout.formHeight).toBeGreaterThan(900);
+  expect(layout.previewHeight).toBeGreaterThan(900);
+});
+
+test('reopens saved generated work directly in the proof workspace', async ({ page }) => {
+  await page.getByLabel(/Full name/).fill('Ada Lovelace');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
+  await expect(page.getByLabel('PDF page 1')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Rendered preview' })).toBeVisible();
+  await expect(page.getByLabel('PDF page 1')).toBeVisible();
 });
 
 test('continues editing when autosave storage is unavailable', async ({ page }) => {

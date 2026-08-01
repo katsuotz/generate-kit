@@ -75,7 +75,7 @@
               '&': {
                 height: '100%',
                 backgroundColor: 'transparent',
-                color: '#322a24',
+                color: '#17212b',
                 fontSize: '14px'
               },
               '.cm-scroller': {
@@ -83,22 +83,24 @@
                 lineHeight: '1.75',
                 padding: '22px 0 40px'
               },
-              '.cm-content': { padding: '0 24px', caretColor: '#a54d2d' },
+              '.cm-content': { padding: '0 24px', caretColor: '#1769d2' },
               '.cm-gutters': {
                 backgroundColor: 'transparent',
-                color: '#a3978c',
+                color: '#5d6b78',
                 border: 'none',
                 paddingLeft: '8px'
               },
-              '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'rgba(175, 91, 57, .07)' },
+              '.cm-activeLine, .cm-activeLineGutter': {
+                backgroundColor: 'rgba(23, 105, 210, .07)'
+              },
               '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-                backgroundColor: 'rgba(177, 102, 68, .2)'
+                backgroundColor: 'rgba(23, 105, 210, .2)'
               },
               '&.cm-focused': {
                 outline: 'none',
-                boxShadow: '0 0 0 3px #f5f0e7, 0 0 0 5px #a65333'
+                boxShadow: '0 0 0 3px #ffffff, 0 0 0 5px #1769d2'
               },
-              '.cm-cursor': { borderLeftColor: '#a54d2d', borderLeftWidth: '2px' }
+              '.cm-cursor': { borderLeftColor: '#1769d2', borderLeftWidth: '2px' }
             })
           ]
         })

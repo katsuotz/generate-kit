@@ -55,7 +55,7 @@
       const viewport = page.getViewport({ scale });
       const canvas = window.document.createElement('canvas');
       canvas.className =
-        'block h-auto max-w-full bg-white shadow-[0_2px_2px_rgba(48,38,30,0.12),0_15px_38px_rgba(48,38,30,0.14)]';
+        'block h-auto max-w-full bg-white shadow-[0_2px_2px_rgba(23,33,43,0.12),0_15px_38px_rgba(23,33,43,0.14)]';
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
       canvas.setAttribute('aria-label', `PDF page ${pageNumber}`);
@@ -77,12 +77,29 @@
 </script>
 
 <div
-  class="grid w-[min(100%,820px)] justify-items-center gap-6"
+  class="pdf-pages"
   bind:this={host}
   aria-label={pageCount ? `PDF preview, ${pageCount} pages` : 'PDF preview'}>
-  <div
-    class="p-[18px] font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#74685e]"
-    aria-live="polite">
+  <div class="pdf-status" aria-live="polite">
     {renderError || 'Loading proof…'}
   </div>
 </div>
+
+<style>
+  .pdf-pages {
+    display: grid;
+    width: min(100%, 820px);
+    justify-items: center;
+    gap: 24px;
+  }
+
+  .pdf-status {
+    padding: 18px;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>

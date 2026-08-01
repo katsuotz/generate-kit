@@ -10,15 +10,14 @@
   export let required = false;
   $: fieldId = `cv-${(path ?? label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   $: errorId = `${fieldId}-error`;
-  const classes =
-    'w-full border-0 border-b border-[var(--rule)] bg-transparent px-0 py-2 text-[17px] text-[var(--ink)] outline-none transition-colors placeholder:text-[#9a8f84] focus:border-[var(--copper)] disabled:opacity-50';
+  const classes = 'cv-input';
 </script>
 
 <label class:col-span-2={wide}>
   <span>{label}</span>
   {#if multiline}
     <textarea
-      class={`${classes} min-h-[86px] resize-y leading-[1.45]`}
+      class={`${classes} cv-textarea`}
       id={fieldId}
       data-path={path}
       bind:value

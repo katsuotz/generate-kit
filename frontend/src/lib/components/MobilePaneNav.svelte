@@ -4,24 +4,68 @@
   export let onSelect: (pane: 'editor' | 'preview') => void;
 </script>
 
-<nav
-  class="hidden grid-cols-2 border-b border-[rgba(62,48,38,0.25)] bg-[#e4ddd2] max-[800px]:grid"
-  aria-label="Workspace panes">
+<nav class="mobile-nav" aria-label="Workspace panes">
   <button
     type="button"
-    class={`relative border-0 bg-transparent font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#786c62] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#a65333] ${active === 'editor' ? 'bg-[#f2ece3] text-[#6f321f] after:absolute after:bottom-0 after:left-[22%] after:right-[22%] after:h-0.5 after:bg-[#a65333]' : ''}`}
+    class:active={active === 'editor'}
     aria-pressed={active === 'editor'}
     on:click={() => onSelect('editor')}>
-    Source
+    Form
   </button>
   <button
     type="button"
-    class={`relative border-0 bg-transparent font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#786c62] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#a65333] ${active === 'preview' ? 'bg-[#f2ece3] text-[#6f321f] after:absolute after:bottom-0 after:left-[22%] after:right-[22%] after:h-0.5 after:bg-[#a65333]' : ''}`}
+    class:active={active === 'preview'}
     aria-pressed={active === 'preview'}
     on:click={() => onSelect('preview')}>
-    Proof {#if diagnosticsCount}<span
-        class="ml-[5px] inline-grid h-[17px] min-w-[17px] place-items-center rounded-full bg-[#a65333] text-[8px] text-[#fff7ef]">
-        {diagnosticsCount}
-      </span>{/if}
+    Preview
+    {#if diagnosticsCount}<span>{diagnosticsCount}</span>{/if}
   </button>
 </nav>
+
+<style>
+  .mobile-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-subtle);
+  }
+
+  button {
+    position: relative;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  button.active {
+    color: var(--blue-dark);
+  }
+
+  button.active::after {
+    position: absolute;
+    right: 24%;
+    bottom: -1px;
+    left: 24%;
+    height: 2px;
+    background: var(--blue);
+    content: '';
+  }
+
+  span {
+    display: inline-grid;
+    min-width: 17px;
+    height: 17px;
+    margin-left: 5px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    font-size: 9px;
+  }
+</style>

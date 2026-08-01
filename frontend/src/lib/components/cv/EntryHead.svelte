@@ -6,8 +6,8 @@
   export let onRemove: () => void;
 </script>
 
-<header class="mb-5 flex items-center justify-between border-b border-[var(--rule)] pb-3">
-  <h3 class="m-0 text-xl font-medium">{title}</h3>
+<header class="entry-head">
+  <h3>{title}</h3>
   <div class="flex gap-1">
     <button
       class="text-button"
