@@ -37,7 +37,13 @@ These instructions apply to the whole repository. More specific instructions in 
 - Keep one backend API instance per workspace so anonymous-session caching, authentication state, document context, and transport behavior remain shared.
 - Keep `BackendPreviewAdapter` dependent only on document and compilation interfaces. Keep HTTP, authentication, and CV-session details out of preview and UI components.
 - Preserve the backend wire contract: cookie credentials, bearer anonymous sessions, one-time `401` retry, snake/camel CV-session normalization, optimistic versions, `204` responses, and binary PDF artifacts.
-- Keep workspace session persistence, conflict recovery, autosave scheduling, account orchestration, preview setup, and downloads in their dedicated services/helpers. Keep validation, section navigation, reactive state, and markup in the Svelte component.
+- Keep workspace session persistence, conflict recovery, autosave scheduling, account orchestration, preview setup, and downloads in their dedicated services/helpers. Keep validation, section navigation, and reactive state in the workspace shell while feature components own markup.
+- Keep reusable, presentation-level controls under `frontend/src/lib/components/base/`: `Button`/`ButtonLink`, form fields, `RadioCard`, and shared field error/accessibility helpers. Base controls own their labels, IDs, validation attributes, and native event/value forwarding while preserving the existing `.button`, `.cv-input`, `.field-error`, and related CSS vocabulary.
+- Keep pure and browser-bound leaf helpers under `frontend/src/lib/utils/`. Filename/string normalization, blob downloads, and clipboard access belong there; feature services may compose them, but base components must not depend on workspace, API, compiler, or document state.
+- Prefer the legacy-compatible Svelte component syntax already used by the frontend (`export let`, `bind:value`, and `on:` forwarding) until a migration explicitly adopts runes. Keep reusable controls independently importable through their base component paths or barrel export.
+- Put feature components under feature-specific folders such as `components/workspace/` and `landing/`; keep route entrypoints and `Workspace.svelte` as orchestration shells. Workspace components own markup while the workspace shell retains state, validation, and service coordination.
+- Use `components/base` for reusable controls and repeated UI patterns. Direct native controls are limited to base controls and specialized integrations such as CodeMirror and PDF canvas rendering.
+- Keep shared pure/browser helpers in `frontend/src/lib/utils/`; leave CV fingerprinting/model logic under `cv/`, API serialization under `api/`, preview logic under `preview/`, and session/account/download orchestration under `workspace/`.
 
 ### Frontend commands
 

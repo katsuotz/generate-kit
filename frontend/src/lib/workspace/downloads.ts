@@ -1,24 +1,11 @@
 import type { PreviewResult } from '$lib/preview/types';
+import { copyToClipboard } from '$lib/utils/clipboard';
+import { downloadBlob as downloadBlobFile } from '$lib/utils/download';
+import { fileStem } from '$lib/utils/filename';
 
-export function fileStem(fullName: string) {
-  return (
-    fullName
-      .trim()
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'cv'
-  );
-}
+export { fileStem };
 
-export function downloadBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
+export const downloadBlob = downloadBlobFile;
 
 export function downloadText(source: string, fullName: string) {
   if (!source) return;
@@ -35,5 +22,5 @@ export function downloadPdf(result: PreviewResult | null, fullName: string) {
 
 export function copySource(source: string) {
   if (!source) return Promise.resolve();
-  return navigator.clipboard.writeText(source);
+  return copyToClipboard(source);
 }

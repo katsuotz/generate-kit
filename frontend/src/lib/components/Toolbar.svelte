@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from './base';
+
   export let status: 'idle' | 'loading' | 'success' | 'empty' | 'failure';
   export let dirty: boolean;
   export let onCompile: () => void;
@@ -21,9 +23,13 @@
           ? 'Proof ready'
           : 'Draft'}
   </div>
-  <button type="button" on:click={onCompile} disabled={status === 'loading'}>
+  <Button
+    variant="primary"
+    className="toolbar-compile"
+    onClick={onCompile}
+    disabled={status === 'loading'}>
     {status === 'loading' ? 'Rendering…' : 'Preview'}
-  </button>
+  </Button>
 </header>
 
 <style>
@@ -76,7 +82,7 @@
 
   .toolbar-brand span:last-child,
   .toolbar-status,
-  .toolbar button {
+  :global(.toolbar-compile) {
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.08em;
@@ -88,7 +94,7 @@
     color: var(--muted-ink);
   }
 
-  .toolbar button {
+  :global(.toolbar-compile) {
     min-height: 36px;
     border: 0;
     border-radius: 7px;
@@ -98,7 +104,7 @@
     font-weight: 600;
   }
 
-  .toolbar button:disabled {
+  :global(.toolbar-compile:disabled) {
     opacity: 0.5;
   }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PreviewDiagnostic } from '$lib/preview/types';
+  import { Button } from './base';
 
   export let diagnostics: PreviewDiagnostic[];
   export let onSelect: (line: number) => void;
@@ -19,11 +20,14 @@
     <ol>
       {#each diagnostics as diagnostic}
         <li>
-          <button type="button" on:click={() => onSelect(diagnostic.line)}>
+          <Button
+            variant="secondary"
+            className="diagnostic-button"
+            onClick={() => onSelect(diagnostic.line)}>
             <span class="diagnostic-location">Ln {diagnostic.line}:{diagnostic.column}</span>
             <span class="diagnostic-message">{diagnostic.message}</span>
             <code>{diagnostic.code}</code>
-          </button>
+          </Button>
         </li>
       {/each}
     </ol>
@@ -92,7 +96,7 @@
     margin-top: 6px;
   }
 
-  button {
+  :global(.diagnostic-button) {
     display: grid;
     width: 100%;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -107,7 +111,7 @@
     text-align: left;
   }
 
-  button:hover {
+  :global(.diagnostic-button:hover) {
     border-color: #d8867f;
     background: #fff;
   }
@@ -126,7 +130,7 @@
   }
 
   @media (max-width: 800px) {
-    button {
+    :global(.diagnostic-button) {
       grid-template-columns: auto minmax(0, 1fr);
     }
 

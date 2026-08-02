@@ -23,6 +23,10 @@ The app is a SvelteKit workspace with a backend-backed document and compile flow
 - Unit/component tests and a Playwright accessibility/workspace smoke-test foundation.
 - Domain-specific API modules backed by one shared HTTP client and session context. Authentication, CV sessions, documents, and compilation no longer share a monolithic client implementation.
 - Workspace persistence and account orchestration live under `frontend/src/lib/workspace/`; the Svelte component composes the session controller, account service, download helpers, and preview adapter around UI state.
+- Reusable controls live under `frontend/src/lib/components/base/`. `Button`, `ButtonLink`, field controls, `RadioCard`, and shared field error/accessibility handling own native semantics and stable IDs while retaining the established `.button`, `.cv-input`, `.field-error`, and template-card visual vocabulary.
+- Pure/browser utilities live under `frontend/src/lib/utils/`: filename and string normalization, generic blob downloads, and clipboard helpers are independent of workspace state and can be composed by feature services. Existing workspace download exports remain compatible during the migration.
+- Keep base components and utilities free of transport, compiler, CV-session, and workspace orchestration dependencies. Use the repository's Svelte 4/5-compatible legacy syntax until the frontend adopts a coordinated runes migration.
+- Keep route entrypoints and the workspace shell focused on orchestration. Feature-specific markup belongs in `components/workspace/` and `landing/`; repeated controls and patterns belong in `components/base/`, with direct native controls reserved for base controls and specialized integrations.
 - The backend owns the read-only template catalog and render operation. The frontend loads catalog metadata and first-page preview PDFs through a dedicated templates API, then persists selected and last-generated template IDs with the CV draft.
 
 The adapter seam keeps transport and compiler details out of the Svelte components. Real TeX semantics, package support, PDF loading, and network persistence are provided by the backend integration.
@@ -41,6 +45,7 @@ The adapter seam keeps transport and compiler details out of the Svelte componen
 - Keep workspace state responsible for source, dirty state, selected pane, split size, request status, last successful result, and diagnostics.
 - Keep `frontend/src/lib/api/index.ts` as the API composition root so each workspace uses one transport/session context and domain APIs expose only their own DTOs and operations.
 - Keep `frontend/src/lib/workspace/sessionController.ts` responsible for bootstrap, debounced and forced saves, optimistic versions, conflict recovery, and disposal; keep account and browser download concerns in their own services.
+- Keep validation and section-specific composition in feature components; reusable field controls should receive a value, error, and optional `data-path`/description and expose the input's native binding and events. Error text must be directly associated through `aria-describedby`/`aria-errormessage` and `aria-invalid`.
 - Load the template catalog before CV session bootstrap so the picker has canonical metadata and a valid selection when a saved draft is restored. Keep selected-template changes separate from the last-generated template so stale proof state remains honest.
 - Keep preview orchestration dependent on `PreviewAdapter`, not on HTTP or process-spawning details.
 - Keep browser tests deterministic with the test-only backend HTTP fixture while application code always uses `BackendPreviewAdapter` and `PUBLIC_API_BASE_URL`.
