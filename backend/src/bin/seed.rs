@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "experience": [], "achievements": [], "skills": [], "education": [], "certificates": [], "projects": []
     });
     sqlx::query(
-        "INSERT INTO cv_drafts (project_id, document_id, schema_version, template_id, data, generated_source, generated_at, fingerprint) VALUES ($1, $2, 1, 'editorial-v1', $3, $4, now(), 'demo-seed') ON CONFLICT (document_id) DO UPDATE SET data = EXCLUDED.data, generated_source = EXCLUDED.generated_source, generated_at = EXCLUDED.generated_at, fingerprint = EXCLUDED.fingerprint, updated_at = now()",
+        "INSERT INTO cv_drafts (project_id, document_id, schema_version, template_id, generated_template_id, data, generated_source, generated_at, fingerprint) VALUES ($1, $2, 1, 'editorial-v1', 'editorial-v1', $3, $4, now(), 'demo-seed') ON CONFLICT (document_id) DO UPDATE SET template_id = 'editorial-v1', generated_template_id = 'editorial-v1', data = EXCLUDED.data, generated_source = EXCLUDED.generated_source, generated_at = EXCLUDED.generated_at, fingerprint = EXCLUDED.fingerprint, updated_at = now()",
     )
     .bind(project_id)
     .bind(document_id)

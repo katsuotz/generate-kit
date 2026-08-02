@@ -6,6 +6,23 @@ const jobs = new Map();
 const cvSessions = new Map();
 const users = new Map();
 let sequence = 0;
+const templates = [
+  {
+    id: 'editorial-v1',
+    name: 'Editorial dossier',
+    description: 'A quiet, structured page for thoughtful work.'
+  },
+  {
+    id: 'compact-v1',
+    name: 'Compact signal',
+    description: 'A denser layout for broad experience.'
+  },
+  {
+    id: 'modern-v1',
+    name: 'Modern hierarchy',
+    description: 'A contemporary layout with a stronger accent.'
+  }
+];
 
 function id(prefix) {
   sequence += 1;
@@ -83,6 +100,22 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && path === '/api/v1/cv/templates') {
+    json(response, 200, { templates });
+    return;
+  }
+  const templatePreviewPath = path.match(/^\/api\/v1\/cv\/templates\/([^/]+)\/preview$/);
+  if (request.method === 'GET' && templatePreviewPath) {
+    response.writeHead(200, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:5173',
+      'Content-Length': pdf.byteLength,
+      'Content-Type': 'application/pdf'
+    });
+    response.end(pdf);
+    return;
+  }
+
   if (request.method === 'GET' && path === '/api/v1/auth/me') {
     const user = users.get(request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1]);
     json(
@@ -130,6 +163,21 @@ const server = createServer(async (request, response) => {
     const session = { id: id('cv-session'), version: 1, ...input };
     cvSessions.set(sessionId, session);
     json(response, 201, session);
+    return;
+  }
+
+  if (request.method === 'POST' && path === '/api/v1/cv/render') {
+    const input = await body(request);
+    const fullName = input.data?.identity?.fullName ?? '';
+    if (fullName === 'E2E RENDER FAILURE') {
+      json(response, 422, { code: 'render_failed', message: 'Fixture renderer rejected this CV.' });
+      return;
+    }
+    json(response, 200, {
+      template_id: input.template_id,
+      source: `Generated source for ${fullName || 'CV'}\n`,
+      generated_at: '2026-08-02T00:00:00.000Z'
+    });
     return;
   }
   if (request.method === 'PUT' && path === '/api/v1/cv/session') {

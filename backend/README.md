@@ -2,7 +2,7 @@
 
 Rust/Axum service for persisted CV documents and isolated LaTeX compilation.
 
-The source is feature-based: `sessions`, `documents`, `cv`, and `compilation`. Each feature contains its models, routes, repository, and service. PostgreSQL repositories implement small feature-specific traits, and services are constructed with those traits so the HTTP and worker entry points share the same use cases without adding unnecessary abstraction layers.
+The source is feature-based: `sessions`, `documents`, `cv`, and `compilation`. The CV feature owns the PostgreSQL-backed template catalog, source-controlled templates under `src/cv/templates/`, and fixed sample PDF previews. Each feature contains its models, routes, repository, and service. PostgreSQL repositories implement small feature-specific traits, and services are constructed with those traits so the HTTP and worker entry points share the same use cases without adding unnecessary abstraction layers.
 
 ## Local development
 
@@ -54,10 +54,13 @@ Host-side worker runs keep compilation disabled unless `LATEX_COMPILER_ENABLED=t
 - `GET /api/v1/cv/session`
 - `POST /api/v1/cv/session`
 - `PUT /api/v1/cv/session`
+- `GET /api/v1/cv/templates`
+- `GET /api/v1/cv/templates/{id}/preview`
+- `POST /api/v1/cv/render`
 
 Account registration and login use Argon2id password hashes and set an HttpOnly `lr_session` cookie. Registering while an anonymous session is supplied transfers that session's projects, documents, revisions, and CV draft to the new account atomically. Anonymous bearer sessions remain supported for existing clients.
 
-CV draft writes use an optimistic `expected_version` field. Send `expected_version: 0` to create the first draft, then send the version returned by the previous write; a stale version returns `409 Conflict`. Draft data is bounded to 1 MiB and responses include the associated project, document, and latest revision metadata.
+CV draft writes use an optimistic `expected_version` field. Send `expected_version: 0` to create the first draft, then send the version returned by the previous write; a stale version returns `409 Conflict`. Draft data is bounded to 1 MiB and responses include the associated project, document, and latest revision metadata. `template_id` stores the selected catalog template; `generated_template_id` records which template produced the persisted source, so changing the selection leaves an older proof explicitly outdated. The render endpoint returns escaped source and its timestamp; it does not enqueue a live compile job.
 
 All application identifiers are PostgreSQL UUIDv7 values generated with `uuidv7()`.
 

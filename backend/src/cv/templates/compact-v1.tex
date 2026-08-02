@@ -1,0 +1,21 @@
+% CV_BUILDER_TEMPLATE:compact-v1
+\documentclass[9pt,letterpaper]{article}
+\usepackage[top=1.45cm,bottom=1.45cm,left=1.6cm,right=1.6cm,footskip=0.65cm]{geometry}
+\usepackage{titlesec,tabularx,array,enumitem,fontawesome5,amsmath,xcolor,hyperref,calc,bookmark,changepage,paracol,ifthen,needspace,fancyhdr}
+\usepackage{charter}
+\usepackage{fontspec}
+\IfFontExistsTF{Roboto}{\setsansfont{Roboto}}{\setsansfont{Arial}}
+\definecolor{primaryColor}{RGB}{0,0,0}
+\hypersetup{pdftitle={{{FULL_NAME}} CV},pdfauthor={{{FULL_NAME}}},pdfcreator={Marginalia CV Builder},colorlinks=true,urlcolor=primaryColor}
+\pagestyle{fancy}\fancyhf{}\renewcommand{\headrulewidth}{0pt}\fancyfoot[C]{\scriptsize\color{primaryColor}{{FULL_NAME}} -- {{GENERATED_DATE}} -- \thepage}
+\setcounter{secnumdepth}{0}\setlength{\parindent}{0pt}\setlength{\columnsep}{0.1cm}
+\titleformat{\section}{\needspace{3\baselineskip}\bfseries\normalsize}{}{0pt}{}[\vspace{1pt}\titlerule]
+\titlespacing{\section}{-1pt}{0.17cm}{0.1cm}
+\newenvironment{highlights}{\begin{itemize}[topsep=0.03cm,parsep=0.03cm,partopsep=0pt,itemsep=0pt,leftmargin=0.35cm + 8pt]}{\end{itemize}}
+\newenvironment{onecolentry}{\begin{adjustwidth}{0cm}{0cm}}{\end{adjustwidth}}
+\newenvironment{twocolentry}[1]{\onecolentry\def\secondColumn{#1}\setcolumnwidth{\fill,4.1cm}\begin{paracol}{2}}{\switchcolumn\raggedleft\secondColumn\end{paracol}\endonecolentry}
+\newcommand{\AND}{\unskip\cleaders\copy\ANDbox\hskip\wd\ANDbox\ignorespaces}\newsavebox\ANDbox\sbox\ANDbox{$|$}
+\begin{document}
+\begin{center}{\fontsize{23pt}{24pt}\selectfont\bfseries {{FULL_NAME}}}\par\vspace{0.08cm}{{PROFESSIONAL_TITLES}}\par\vspace{0.08cm}{\scriptsize {{CONTACTS}}}\end{center}
+\vspace{0.08cm}
+{{SECTIONS}}\end{document}

@@ -4,6 +4,7 @@ export interface CvSessionDraft {
   schemaVersion: number;
   data: CvData;
   templateId: string;
+  generatedTemplateId: string | null;
   lastGeneratedSource: string;
   generatedAt: string | null;
   fingerprint: string;

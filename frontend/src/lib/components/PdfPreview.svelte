@@ -7,22 +7,29 @@
 
   export let data: ArrayBuffer;
   export let pageCount: number | null = null;
+  export let firstPageOnly = false;
+  export let compact = false;
+  export let onError: (message: string) => void = () => undefined;
 
   let host: HTMLDivElement;
   let renderId = 0;
   let document: PdfDocument | undefined;
   let loadingTask: PdfLoadingTask | undefined;
   let renderError = '';
+  let isLoading = true;
 
   $: if (data) queueRender(data);
 
   function queueRender(source: ArrayBuffer) {
     const currentRender = ++renderId;
     renderError = '';
+    isLoading = true;
     void renderPdf(source, currentRender).catch((error) => {
       if (currentRender !== renderId || isCancellation(error)) return;
       renderError =
         error instanceof Error ? error.message : 'The PDF proof could not be displayed.';
+      isLoading = false;
+      onError(renderError);
     });
   }
 
@@ -46,7 +53,8 @@
     }
     document = loaded;
 
-    for (let pageNumber = 1; pageNumber <= loaded.numPages; pageNumber += 1) {
+    const lastPage = firstPageOnly ? 1 : loaded.numPages;
+    for (let pageNumber = 1; pageNumber <= lastPage; pageNumber += 1) {
       if (currentRender !== renderId) return;
       const page = await loaded.getPage(pageNumber);
       const initialViewport = page.getViewport({ scale: 1 });
@@ -62,6 +70,7 @@
       host.appendChild(canvas);
       await page.render({ canvas, viewport }).promise;
     }
+    isLoading = false;
   }
 
   function isCancellation(error: unknown) {
@@ -77,12 +86,14 @@
 </script>
 
 <div
+  class:compact
   class="pdf-pages"
   bind:this={host}
+  role="img"
   aria-label={pageCount ? `PDF preview, ${pageCount} pages` : 'PDF preview'}>
-  <div class="pdf-status" aria-live="polite">
-    {renderError || 'Loading proof…'}
-  </div>
+  {#if renderError || isLoading}<div class="pdf-status" aria-live="polite">
+      {renderError || 'Loading proof…'}
+    </div>{/if}
 </div>
 
 <style>
@@ -93,6 +104,11 @@
     gap: 24px;
   }
 
+  .pdf-pages.compact {
+    width: 100%;
+    gap: 0;
+  }
+
   .pdf-status {
     padding: 18px;
     color: var(--muted-ink);
@@ -101,5 +117,10 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  .pdf-pages.compact .pdf-status {
+    padding: 12px;
+    font-size: 9px;
   }
 </style>

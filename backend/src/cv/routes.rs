@@ -1,6 +1,14 @@
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{
+    Json,
+    body::Body,
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode, header},
+    response::Response,
+};
 
-use super::model::{CvSessionResponse, SaveCvSessionRequest};
+use super::model::{
+    CvSessionResponse, RenderCvRequest, RenderCvResponse, SaveCvSessionRequest, TemplateCatalogItem,
+};
 use crate::sessions::routes::validate_origin;
 use crate::{AppState, error::AppError};
 
@@ -34,6 +42,35 @@ pub async fn save_session(
         },
         Json(session),
     ))
+}
+
+pub async fn list_templates(
+    State(state): State<crate::AppState>,
+) -> Result<Json<Vec<TemplateCatalogItem>>, AppError> {
+    Ok(Json(state.cv_templates.catalog().await?))
+}
+
+pub async fn template_preview(
+    State(state): State<crate::AppState>,
+    Path(template_id): Path<String>,
+) -> Result<Response, AppError> {
+    let (bytes, media_type) = state.cv_templates.preview(&template_id).await?;
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, media_type)
+        .header(header::CACHE_CONTROL, "public, max-age=3600")
+        .body(Body::from(bytes))
+        .map_err(|error| AppError::Internal(error.to_string()))
+}
+
+pub async fn render_cv(
+    State(state): State<crate::AppState>,
+    headers: HeaderMap,
+    Json(request): Json<RenderCvRequest>,
+) -> Result<Json<RenderCvResponse>, AppError> {
+    validate_origin(&headers, &state.config, true)?;
+    state.sessions.authenticate(&headers).await?;
+    Ok(Json(state.cv_render.render(request).await?))
 }
 
 pub async fn get_draft(

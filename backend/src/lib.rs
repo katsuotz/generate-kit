@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     http::{Method, header},
     routing::{get, post},
 };
@@ -17,7 +18,7 @@ use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
 
 use compilation::{CompilationService, repository::PgCompilationRepository};
 use config::Config;
-use cv::{CvService, repository::PgCvRepository};
+use cv::{CvRenderService, CvService, CvTemplateService, repository::PgCvRepository};
 use documents::{DocumentService, repository::PgDocumentRepository};
 use sessions::{SessionService, repository::PgSessionRepository};
 
@@ -29,6 +30,8 @@ pub struct AppState {
     pub documents: Arc<DocumentService>,
     pub compilation: Arc<CompilationService>,
     pub cv: Arc<CvService>,
+    pub cv_templates: Arc<CvTemplateService>,
+    pub cv_render: Arc<CvRenderService>,
 }
 
 pub fn router(pool: PgPool, config: Config) -> Router {
@@ -49,7 +52,10 @@ pub fn router(pool: PgPool, config: Config) -> Router {
         Arc::new(PgCompilationRepository::new(pool.clone())),
         documents.clone(),
     ));
-    let cv = Arc::new(CvService::new(Arc::new(PgCvRepository::new(pool.clone()))));
+    let cv_repository = Arc::new(PgCvRepository::new(pool.clone()));
+    let cv_templates = Arc::new(CvTemplateService::new(cv_repository.clone()));
+    let cv = Arc::new(CvService::new(cv_repository, cv_templates.clone()));
+    let cv_render = Arc::new(CvRenderService::new(cv_templates.clone()));
     let state = AppState {
         pool,
         config,
@@ -57,6 +63,8 @@ pub fn router(pool: PgPool, config: Config) -> Router {
         documents,
         compilation,
         cv,
+        cv_templates,
+        cv_render,
     };
     Router::new()
         .route("/health/live", get(live))
@@ -97,7 +105,16 @@ pub fn router(pool: PgPool, config: Config) -> Router {
                 .post(cv::routes::save_session)
                 .put(cv::routes::save_session),
         )
+        .route("/api/v1/cv/templates", get(cv::routes::list_templates))
+        .route(
+            "/api/v1/cv/templates/{template_id}/preview",
+            get(cv::routes::template_preview),
+        )
+        .route("/api/v1/cv/render", post(cv::routes::render_cv))
         .with_state(state)
+        .layer(DefaultBodyLimit::max(
+            2 * cv::template::MAX_RENDER_DATA_BYTES,
+        ))
         .layer(TimeoutLayer::with_status_code(
             axum::http::StatusCode::REQUEST_TIMEOUT,
             std::time::Duration::from_secs(10),

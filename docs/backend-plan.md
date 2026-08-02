@@ -10,7 +10,8 @@ The service currently provides anonymous sessions, persisted projects/documents/
 
 - `latex-renderer-backend` serves the HTTP API and runs database migrations.
 - `latex-renderer-worker` claims jobs with PostgreSQL row locking and executes the compiler boundary.
-- Source code is organized by feature: `sessions`, `documents`, and `compilation`.
+- Source code is organized by feature: `sessions`, `documents`, `compilation`, and backend-owned CV templates.
+- PostgreSQL stores active template catalog metadata and ordering, while source-controlled `.tex` files and fixed sample PDFs live under `cv/templates/`.
 - Each feature keeps its models, routes, repository, and service together. Repositories own SQLx persistence, while services own validation, authorization, and use-case coordination.
 - Repository traits and the existing `Compiler` trait are the explicit dependency-injection boundaries. Concrete PostgreSQL repositories and services are composed in `lib.rs`; no workspace crates are needed yet.
 - PostgreSQL generates UUIDv7 identifiers with `uuidv7()` and stores documents, jobs, diagnostics, and bounded PDF artifacts.
@@ -37,14 +38,26 @@ backend/src/
 │   ├── repository.rs
 │   ├── service.rs
 │   └── routes.rs
-└── compilation/
-    ├── mod.rs
+├── compilation/
+│   ├── mod.rs
+│   ├── model.rs
+│   ├── repository.rs
+│   ├── service.rs
+│   ├── compiler.rs
+│   ├── worker.rs
+│   └── routes.rs
+└── cv/
+    ├── templates/
+    │   ├── editorial-v1.tex
+    │   ├── compact-v1.tex
+    │   ├── modern-v1.tex
+    │   ├── editorial-v1.pdf
+    │   ├── compact-v1.pdf
+    │   └── modern-v1.pdf
     ├── model.rs
     ├── repository.rs
-    ├── service.rs
-    ├── compiler.rs
-    ├── worker.rs
-    └── routes.rs
+    ├── routes.rs
+    └── service.rs
 ```
 
 The backend remains one crate. Additional workspace crates should be introduced only when a boundary becomes independently reusable or independently deployable.
@@ -62,8 +75,13 @@ The backend remains one crate. Additional workspace crates should be introduced 
 - `GET /api/v1/compile-jobs/{job_id}`
 - `DELETE /api/v1/compile-jobs/{job_id}`
 - `GET /api/v1/artifacts/{artifact_id}`
+- `GET /api/v1/cv/templates`
+- `GET /api/v1/cv/templates/{id}/preview`
+- `POST /api/v1/cv/render`
 
 Compile jobs return queued/running/succeeded/failed/cancelled states and structured diagnostics with optional file, line, and column locations. Successful jobs expose PDF artifact metadata and an authenticated artifact endpoint.
+
+`POST /api/v1/cv/render` accepts typed CV data and an active `template_id`, applies backend LaTeX escaping, enforces the 1 MiB data and 512 KiB source limits, and returns generated source and timestamp. `cv_drafts.generated_template_id` records which template produced persisted source; `template_id` remains the current selection. The legacy `default` identifier is normalized to `editorial-v1`.
 
 ## Remaining backend work
 

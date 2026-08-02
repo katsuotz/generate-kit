@@ -5,9 +5,9 @@
     createBackendApi,
     type AuthUser,
     type CvSessionDraft,
-    type CvSessionResponse
+    type CvSessionResponse,
+    type CvTemplateSummary
   } from '$lib/api';
-  import { generateCv, templates } from '$lib/cv/generator';
   import {
     blankCv,
     entryId,
@@ -33,6 +33,7 @@
   import Field from '../components/cv/Field.svelte';
   import EntryHead from '../components/cv/EntryHead.svelte';
   import AddButton from '../components/cv/AddButton.svelte';
+  import TemplatePicker from '../components/TemplatePicker.svelte';
 
   type EntrySection = Exclude<CvSectionId, 'summary'>;
   const labels: Record<CvSectionId, string> = {
@@ -57,7 +58,9 @@
   const textareaClass = 'cv-input cv-textarea';
 
   let data: CvData = blankCv();
-  let templateId = templates[0].id;
+  let templateCatalog: CvTemplateSummary[] = [];
+  let templateId = '';
+  let generatedTemplateId: string | null = null;
   let activeSection: CvSectionId = 'summary';
   let mobilePane: 'form' | 'preview' = 'form';
   let presentation: 'intake' | 'workspace' = 'intake';
@@ -86,10 +89,13 @@
   const backendAdapter = new BackendPreviewAdapter(backendApi.documents, backendApi.compilation);
   let controller: PreviewController | null = null;
   let controllerReady = false;
+  let rendering = false;
   let sessionController: SessionController;
   let accountService: AccountService;
   $: currentFingerprint = fingerprintCv(data);
-  $: dirty = currentFingerprint !== generatedFingerprint;
+  $: dirty =
+    currentFingerprint !== generatedFingerprint ||
+    (!!lastGeneratedSource && templateId !== generatedTemplateId);
   $: sectionIndex = SECTION_ORDER.indexOf(activeSection);
 
   function sessionDraft(): CvSessionDraft {
@@ -97,6 +103,7 @@
       schemaVersion: 1,
       data: structuredClone(data),
       templateId,
+      generatedTemplateId,
       lastGeneratedSource,
       generatedAt,
       fingerprint: generatedFingerprint
@@ -181,7 +188,7 @@
     errors.filter((error) => error.section === section).length;
 
   async function generate() {
-    if (state.status === 'loading') return;
+    if (rendering || state.status === 'loading') return;
     if (!controllerReady || !controller) {
       notice = 'The preview workspace is still loading. Try Generate CV again in a moment.';
       return;
@@ -196,10 +203,15 @@
       );
       return;
     }
+    rendering = true;
     try {
-      const date = new Date();
-      lastGeneratedSource = generateCv(data, templateId, date);
-      generatedAt = date.toISOString();
+      const rendered = await backendApi.cvRender.render({
+        templateId,
+        data: structuredClone(data)
+      });
+      lastGeneratedSource = rendered.generatedSource;
+      generatedTemplateId = rendered.templateId;
+      generatedAt = rendered.generatedAt;
       generatedFingerprint = currentFingerprint;
       presentation = 'workspace';
       mobilePane = 'preview';
@@ -218,7 +230,16 @@
             : 'Source generated in this tab, but the draft could not be saved.';
     } catch (error) {
       notice = error instanceof Error ? error.message : 'Could not generate the CV.';
+    } finally {
+      rendering = false;
     }
+  }
+
+  function selectTemplate(nextTemplateId: string) {
+    if (nextTemplateId === templateId) return;
+    templateId = nextTemplateId;
+    notice = '';
+    scheduleAutosave();
   }
   function downloadText() {
     if (!lastGeneratedSource) return;
@@ -258,6 +279,7 @@
   function hydrateSession(session: CvSessionResponse) {
     data = session.data;
     templateId = session.templateId;
+    generatedTemplateId = session.generatedTemplateId;
     lastGeneratedSource = session.lastGeneratedSource;
     generatedAt = session.generatedAt;
     generatedFingerprint = session.fingerprint || (lastGeneratedSource ? fingerprintCv(data) : '');
@@ -304,6 +326,9 @@
     let active = true;
     void (async () => {
       try {
+        templateCatalog = await backendApi.templates.list();
+        if (!templateCatalog.length) throw new Error('No CV templates are available.');
+        templateId = templateCatalog[0].id;
         const user = await accountService.currentUser();
         if (!active) return;
         authUser = user;
@@ -475,8 +500,8 @@
         class="button button-primary generate-button"
         type="button"
         on:click={generate}
-        disabled={!controllerReady || state.status === 'loading'}>
-        {state.status === 'loading' ? 'Generating…' : 'Generate CV'}
+        disabled={!controllerReady || rendering || state.status === 'loading'}>
+        {rendering || state.status === 'loading' ? 'Generating…' : 'Generate CV'}
       </button>
     </div>
   </header>
@@ -556,6 +581,14 @@
           {#if notice}<p class="notice" role="status">
               {notice}
             </p>{/if}
+
+          {#if activeSection === 'summary' && templateCatalog.length}
+            <TemplatePicker
+              templates={templateCatalog}
+              selectedId={templateId}
+              loadPreview={backendApi.templates.getPreview.bind(backendApi.templates)}
+              onSelect={selectTemplate} />
+          {/if}
 
           {#if activeSection === 'summary'}
             <div class="grid grid-cols-2 gap-x-7 gap-y-6 max-[560px]:grid-cols-1">

@@ -23,6 +23,7 @@ The app is a SvelteKit workspace with a backend-backed document and compile flow
 - Unit/component tests and a Playwright accessibility/workspace smoke-test foundation.
 - Domain-specific API modules backed by one shared HTTP client and session context. Authentication, CV sessions, documents, and compilation no longer share a monolithic client implementation.
 - Workspace persistence and account orchestration live under `frontend/src/lib/workspace/`; the Svelte component composes the session controller, account service, download helpers, and preview adapter around UI state.
+- The backend owns the read-only template catalog and render operation. The frontend loads catalog metadata and first-page preview PDFs through a dedicated templates API, then persists selected and last-generated template IDs with the CV draft.
 
 The adapter seam keeps transport and compiler details out of the Svelte components. Real TeX semantics, package support, PDF loading, and network persistence are provided by the backend integration.
 
@@ -40,6 +41,7 @@ The adapter seam keeps transport and compiler details out of the Svelte componen
 - Keep workspace state responsible for source, dirty state, selected pane, split size, request status, last successful result, and diagnostics.
 - Keep `frontend/src/lib/api/index.ts` as the API composition root so each workspace uses one transport/session context and domain APIs expose only their own DTOs and operations.
 - Keep `frontend/src/lib/workspace/sessionController.ts` responsible for bootstrap, debounced and forced saves, optimistic versions, conflict recovery, and disposal; keep account and browser download concerns in their own services.
+- Load the template catalog before CV session bootstrap so the picker has canonical metadata and a valid selection when a saved draft is restored. Keep selected-template changes separate from the last-generated template so stale proof state remains honest.
 - Keep preview orchestration dependent on `PreviewAdapter`, not on HTTP or process-spawning details.
 - Keep browser tests deterministic with the test-only backend HTTP fixture while application code always uses `BackendPreviewAdapter` and `PUBLIC_API_BASE_URL`.
 - Treat backend-generated HTML or artifact content as untrusted at the rendering boundary; define sanitization and artifact-loading rules before integration.
@@ -47,6 +49,8 @@ The adapter seam keeps transport and compiler details out of the Svelte componen
 ## Backend integration
 
 The backend defines an asynchronous job API, structured diagnostics, bounded PDF artifacts, and the `cv-xelatex` profile. The frontend production adapter persists revisions, polls and cancels jobs, maps diagnostics to editor locations, and loads completed PDF artifacts through PDF.js.
+
+Template integration adds `GET /api/v1/cv/templates`, `GET /api/v1/cv/templates/{id}/preview`, and `POST /api/v1/cv/render`. Rendering failures do not replace the current source or last successful proof. Template preview loading is best-effort and falls back to an accessible metadata card when a PDF cannot be displayed.
 
 ## Remaining frontend work
 
