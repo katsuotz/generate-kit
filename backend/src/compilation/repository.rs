@@ -4,14 +4,19 @@ use uuid::Uuid;
 
 use super::model::{ArtifactResponse, CompileJobResponse, Diagnostic};
 use crate::error::AppError;
+use crate::sessions::model::Principal;
 
 #[async_trait]
 pub trait CompilationRepository: Send + Sync {
     async fn create_job(&self, revision_id: Uuid, profile: &str) -> Result<Uuid, AppError>;
-    async fn job_owned(&self, session_id: Uuid, job_id: Uuid) -> Result<(), AppError>;
+    async fn job_owned(&self, principal: &Principal, job_id: Uuid) -> Result<(), AppError>;
     async fn get_job(&self, job_id: Uuid) -> Result<CompileJobResponse, AppError>;
     async fn cancel_job(&self, job_id: Uuid) -> Result<(), AppError>;
-    async fn artifact_owned(&self, session_id: Uuid, artifact_id: Uuid) -> Result<(), AppError>;
+    async fn artifact_owned(
+        &self,
+        principal: &Principal,
+        artifact_id: Uuid,
+    ) -> Result<(), AppError>;
     async fn get_artifact(&self, artifact_id: Uuid) -> Result<Vec<u8>, AppError>;
     async fn claim_job(&self) -> Result<Option<(Uuid, Uuid, String)>, AppError>;
     async fn finish_job(
@@ -63,11 +68,13 @@ impl CompilationRepository for PgCompilationRepository {
         .await?)
     }
 
-    async fn job_owned(&self, session_id: Uuid, job_id: Uuid) -> Result<(), AppError> {
+    async fn job_owned(&self, principal: &Principal, job_id: Uuid) -> Result<(), AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM compile_jobs j JOIN document_revisions r ON r.id = j.revision_id JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE j.id = $1 AND p.session_id = $2)",
+            "SELECT EXISTS (SELECT 1 FROM compile_jobs j JOIN document_revisions r ON r.id = j.revision_id JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE j.id = $1 AND ((p.user_id = $2 AND $2 IS NOT NULL) OR (p.session_id = $3 AND $3 IS NOT NULL)))",
         )
         .bind(job_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_one(&self.pool)
         .await?;
@@ -117,11 +124,17 @@ impl CompilationRepository for PgCompilationRepository {
         Ok(())
     }
 
-    async fn artifact_owned(&self, session_id: Uuid, artifact_id: Uuid) -> Result<(), AppError> {
+    async fn artifact_owned(
+        &self,
+        principal: &Principal,
+        artifact_id: Uuid,
+    ) -> Result<(), AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM compile_artifacts a JOIN compile_jobs j ON j.id = a.job_id JOIN document_revisions r ON r.id = j.revision_id JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE a.id = $1 AND p.session_id = $2)",
+            "SELECT EXISTS (SELECT 1 FROM compile_artifacts a JOIN compile_jobs j ON j.id = a.job_id JOIN document_revisions r ON r.id = j.revision_id JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE a.id = $1 AND ((p.user_id = $2 AND $2 IS NOT NULL) OR (p.session_id = $3 AND $3 IS NOT NULL)))",
         )
         .bind(artifact_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_one(&self.pool)
         .await?;
@@ -222,4 +235,8 @@ impl CompilationRepository for PgCompilationRepository {
         .await?
         .rows_affected())
     }
+}
+
+fn owner_columns(principal: &Principal) -> (Option<Uuid>, Option<Uuid>) {
+    (principal.user_id(), principal.anonymous_session_id())
 }

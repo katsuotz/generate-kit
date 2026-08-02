@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateCv, escapeLatex } from './generator';
 import { blankCv, newEntry, validateCv } from './model';
-import { CV_STORAGE_KEY, fingerprintCv, loadCvRecord, saveCvRecord } from './storage';
+import { fingerprintCv } from './storage';
 
 describe('CV model and generation', () => {
   it('requires identity and a contact method', () => {
@@ -61,45 +61,8 @@ describe('CV model and generation', () => {
     expect(source).toContain('A\\&B');
   });
 
-  it('round-trips a versioned storage record', () => {
-    const values = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => values.set(key, value)
-    };
+  it('fingerprints structured data deterministically', () => {
     const data = blankCv();
-    const record = {
-      version: 1 as const,
-      data,
-      templateId: 'editorial-v1',
-      lastGeneratedSource: 'source',
-      generatedAt: null,
-      fingerprint: fingerprintCv(data)
-    };
-    saveCvRecord(storage, record);
-    expect(values.has(CV_STORAGE_KEY)).toBe(true);
-    expect(loadCvRecord(storage)).toEqual(record);
-  });
-
-  it('rejects malformed records and tolerates unavailable storage', () => {
-    const malformed = { getItem: () => JSON.stringify({ version: 1, data: { identity: {} } }) };
-    expect(loadCvRecord(malformed)).toBeNull();
-    expect(
-      saveCvRecord(
-        {
-          setItem: () => {
-            throw new DOMException('full', 'QuotaExceededError');
-          }
-        },
-        {
-          version: 1,
-          data: blankCv(),
-          templateId: 'editorial-v1',
-          lastGeneratedSource: '',
-          generatedAt: null,
-          fingerprint: ''
-        }
-      )
-    ).toBe(false);
+    expect(fingerprintCv(data)).toBe(fingerprintCv(structuredClone(data)));
   });
 });

@@ -4,18 +4,27 @@ use uuid::Uuid;
 
 use super::model::{DocumentResponse, ProjectResponse};
 use crate::error::AppError;
+use crate::sessions::model::Principal;
 
 #[async_trait]
 pub trait DocumentRepository: Send + Sync {
     async fn create_project(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         name: &str,
     ) -> Result<ProjectResponse, AppError>;
 
-    async fn project_owned(&self, session_id: Uuid, project_id: Uuid) -> Result<(), AppError>;
-    async fn document_owned(&self, session_id: Uuid, document_id: Uuid) -> Result<(), AppError>;
-    async fn revision_owned(&self, session_id: Uuid, revision_id: Uuid) -> Result<(), AppError>;
+    async fn project_owned(&self, principal: &Principal, project_id: Uuid) -> Result<(), AppError>;
+    async fn document_owned(
+        &self,
+        principal: &Principal,
+        document_id: Uuid,
+    ) -> Result<(), AppError>;
+    async fn revision_owned(
+        &self,
+        principal: &Principal,
+        revision_id: Uuid,
+    ) -> Result<(), AppError>;
 
     async fn create_document(
         &self,
@@ -26,7 +35,7 @@ pub trait DocumentRepository: Send + Sync {
 
     async fn get_document(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
     ) -> Result<DocumentResponse, AppError>;
 
@@ -53,45 +62,61 @@ impl PgDocumentRepository {
 impl DocumentRepository for PgDocumentRepository {
     async fn create_project(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         name: &str,
     ) -> Result<ProjectResponse, AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         Ok(sqlx::query_as(
-            "INSERT INTO projects (session_id, name) VALUES ($1, $2) RETURNING id, name",
+            "INSERT INTO projects (user_id, session_id, name) VALUES ($1, $2, $3) RETURNING id, name",
         )
+        .bind(user_id)
         .bind(session_id)
         .bind(name)
         .fetch_one(&self.pool)
         .await?)
     }
 
-    async fn project_owned(&self, session_id: Uuid, project_id: Uuid) -> Result<(), AppError> {
+    async fn project_owned(&self, principal: &Principal, project_id: Uuid) -> Result<(), AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM projects WHERE id = $1 AND session_id = $2)",
+            "SELECT EXISTS (SELECT 1 FROM projects WHERE id = $1 AND ((user_id = $2 AND $2 IS NOT NULL) OR (session_id = $3 AND $3 IS NOT NULL)))",
         )
         .bind(project_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_one(&self.pool)
         .await?;
         exists.then_some(()).ok_or(AppError::NotFound)
     }
 
-    async fn document_owned(&self, session_id: Uuid, document_id: Uuid) -> Result<(), AppError> {
+    async fn document_owned(
+        &self,
+        principal: &Principal,
+        document_id: Uuid,
+    ) -> Result<(), AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM documents d JOIN projects p ON p.id = d.project_id WHERE d.id = $1 AND p.session_id = $2)",
+            "SELECT EXISTS (SELECT 1 FROM documents d JOIN projects p ON p.id = d.project_id WHERE d.id = $1 AND ((p.user_id = $2 AND $2 IS NOT NULL) OR (p.session_id = $3 AND $3 IS NOT NULL)))",
         )
         .bind(document_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_one(&self.pool)
         .await?;
         exists.then_some(()).ok_or(AppError::NotFound)
     }
 
-    async fn revision_owned(&self, session_id: Uuid, revision_id: Uuid) -> Result<(), AppError> {
+    async fn revision_owned(
+        &self,
+        principal: &Principal,
+        revision_id: Uuid,
+    ) -> Result<(), AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM document_revisions r JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE r.id = $1 AND p.session_id = $2)",
+            "SELECT EXISTS (SELECT 1 FROM document_revisions r JOIN documents d ON d.id = r.document_id JOIN projects p ON p.id = d.project_id WHERE r.id = $1 AND ((p.user_id = $2 AND $2 IS NOT NULL) OR (p.session_id = $3 AND $3 IS NOT NULL)))",
         )
         .bind(revision_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_one(&self.pool)
         .await?;
@@ -158,9 +183,10 @@ impl DocumentRepository for PgDocumentRepository {
 
     async fn get_document(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
     ) -> Result<DocumentResponse, AppError> {
+        let (user_id, session_id) = owner_columns(principal);
         let row: (Uuid, Uuid, String, Uuid, i64, String) = sqlx::query_as(
             "SELECT d.id, d.project_id, d.name, r.id AS revision_id, r.revision_number, r.source \
              FROM documents d \
@@ -172,9 +198,10 @@ impl DocumentRepository for PgDocumentRepository {
                  ORDER BY revision_number DESC \
                  LIMIT 1\
              ) r ON true \
-             WHERE d.id = $1 AND p.session_id = $2",
+             WHERE d.id = $1 AND ((p.user_id = $2 AND $2 IS NOT NULL) OR (p.session_id = $3 AND $3 IS NOT NULL))",
         )
         .bind(document_id)
+        .bind(user_id)
         .bind(session_id)
         .fetch_optional(&self.pool)
         .await?
@@ -197,6 +224,10 @@ impl DocumentRepository for PgDocumentRepository {
             .await?
             .ok_or(AppError::NotFound)
     }
+}
+
+fn owner_columns(principal: &Principal) -> (Option<Uuid>, Option<Uuid>) {
+    (principal.user_id(), principal.anonymous_session_id())
 }
 
 async fn insert_revision(

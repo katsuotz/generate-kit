@@ -2,7 +2,7 @@
 
 Rust/Axum service for persisted CV documents and isolated LaTeX compilation.
 
-The source is feature-based: `sessions`, `documents`, and `compilation`. Each feature contains its models, routes, repository, and service. PostgreSQL repositories implement small feature-specific traits, and services are constructed with those traits so the HTTP and worker entry points share the same use cases without adding unnecessary abstraction layers.
+The source is feature-based: `sessions`, `documents`, `cv`, and `compilation`. Each feature contains its models, routes, repository, and service. PostgreSQL repositories implement small feature-specific traits, and services are constructed with those traits so the HTTP and worker entry points share the same use cases without adding unnecessary abstraction layers.
 
 ## Local development
 
@@ -13,6 +13,8 @@ docker compose --env-file .env up -d
 ```
 
 The API host port is configured in `.env` via `API_PORT` and defaults to `18732`. `FRONTEND_ORIGIN` controls the single browser origin allowed by CORS. Keep `../frontend/.env` in sync if you change the API port. Run Compose from this directory so it reads the backend `.env` directly.
+
+`COOKIE_SECURE=true` adds the `Secure` attribute to the `lr_session` cookie; enable it when the API is served over HTTPS. State-changing requests carrying cookies are accepted only when their `Origin` matches `FRONTEND_ORIGIN`. Browser clients must send credentials for account sessions.
 
 Beta 2 uses a separate Docker volume because PostgreSQL beta catalog versions are not directly compatible across beta releases. Existing data must be migrated with PostgreSQL upgrade tooling or `pg_dump`/`pg_restore`.
 
@@ -37,6 +39,10 @@ Host-side worker runs keep compilation disabled unless `LATEX_COMPILER_ENABLED=t
 - `GET /health/live`
 - `GET /health/ready`
 - `POST /api/v1/sessions/anonymous`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
 - `POST /api/v1/projects`
 - `POST /api/v1/projects/{project_id}/documents`
 - `GET /api/v1/documents/{document_id}`
@@ -45,5 +51,22 @@ Host-side worker runs keep compilation disabled unless `LATEX_COMPILER_ENABLED=t
 - `GET /api/v1/compile-jobs/{job_id}`
 - `DELETE /api/v1/compile-jobs/{job_id}`
 - `GET /api/v1/artifacts/{artifact_id}`
+- `GET /api/v1/cv/session`
+- `POST /api/v1/cv/session`
+- `PUT /api/v1/cv/session`
+
+Account registration and login use Argon2id password hashes and set an HttpOnly `lr_session` cookie. Registering while an anonymous session is supplied transfers that session's projects, documents, revisions, and CV draft to the new account atomically. Anonymous bearer sessions remain supported for existing clients.
+
+CV draft writes use an optimistic `expected_version` field. Send `expected_version: 0` to create the first draft, then send the version returned by the previous write; a stale version returns `409 Conflict`. Draft data is bounded to 1 MiB and responses include the associated project, document, and latest revision metadata.
 
 All application identifiers are PostgreSQL UUIDv7 values generated with `uuidv7()`.
+
+## Explicit seed command
+
+The seed binary idempotently creates or updates the explicitly requested account and populates one deterministic Demo CV project, document, revision, and draft. It is never run by migrations or application startup:
+
+```powershell
+cargo run --bin seed -- --email admin@example.test --password 'a-long-development-password'
+```
+
+The equivalent environment variables are `SEED_EMAIL` and `SEED_PASSWORD`.

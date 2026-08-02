@@ -16,7 +16,7 @@ The app is a SvelteKit workspace with a backend-backed document and compile flow
 - Toolbar with dirty-state indication, preview action, status feedback, and keyboard shortcut.
 - Preview states for idle, loading, success, empty, and structured failure.
 - Typed `PreviewAdapter` boundary and `BackendPreviewAdapter` for document persistence, compile-job polling, diagnostics, and PDF artifact loading.
-- Anonymous session bootstrap, project/document restoration, revision persistence, compile-job polling/cancellation, structured diagnostics, and authenticated PDF artifact loading through the backend API.
+- Cookie-backed anonymous and account sessions, server CV draft bootstrap/autosave with optimistic versions, project/document restoration, revision persistence, compile-job polling/cancellation, structured diagnostics, and authenticated PDF artifact loading through the backend API.
 - PDF.js rendering for backend-produced PDF previews; deterministic Playwright tests use an HTTP fixture that implements the same backend contract and returns a valid PDF.
 - Preview controller cancellation and monotonically increasing request IDs so stale results cannot replace newer state; the last successful preview remains available when a later request fails.
 - Structured diagnostics and live status announcements.
@@ -46,7 +46,7 @@ The backend defines an asynchronous job API, structured diagnostics, bounded PDF
 
 ## Remaining frontend work
 
-- Decide whether drafts should gain richer local/remote persistence beyond the current anonymous workspace restoration.
+- Improve server draft conflict recovery and multi-tab coordination if richer collaboration is required.
 - Improve diagnostic navigation and map backend file/line/column locations to richer CodeMirror decorations.
 - Add document/project navigation only if the product requires multiple documents.
 - Expand responsive, keyboard, and screen-reader verification, including browser-level accessibility checks.

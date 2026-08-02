@@ -7,6 +7,7 @@ use super::{
     repository::DocumentRepository,
 };
 use crate::error::AppError;
+use crate::sessions::model::Principal;
 
 pub struct DocumentService {
     repository: Arc<dyn DocumentRepository>,
@@ -19,23 +20,21 @@ impl DocumentService {
 
     pub async fn create_project(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         name: &str,
     ) -> Result<ProjectResponse, AppError> {
         validate_name(name, 120)?;
-        self.repository.create_project(session_id, name).await
+        self.repository.create_project(principal, name).await
     }
 
     pub async fn create_document(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         project_id: Uuid,
         name: &str,
         source: &str,
     ) -> Result<DocumentResponse, AppError> {
-        self.repository
-            .project_owned(session_id, project_id)
-            .await?;
+        self.repository.project_owned(principal, project_id).await?;
         validate_name(name, 160)?;
         validate_source(source)?;
         self.repository
@@ -45,12 +44,12 @@ impl DocumentService {
 
     pub async fn update_document(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
         source: &str,
     ) -> Result<DocumentResponse, AppError> {
         self.repository
-            .document_owned(session_id, document_id)
+            .document_owned(principal, document_id)
             .await?;
         validate_source(source)?;
         self.repository.update_document(document_id, source).await
@@ -58,30 +57,26 @@ impl DocumentService {
 
     pub async fn get_document(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
     ) -> Result<DocumentResponse, AppError> {
-        self.repository.get_document(session_id, document_id).await
+        self.repository.get_document(principal, document_id).await
     }
 
     pub async fn document_owned(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
     ) -> Result<(), AppError> {
-        self.repository
-            .document_owned(session_id, document_id)
-            .await
+        self.repository.document_owned(principal, document_id).await
     }
 
     pub async fn revision_owned(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         revision_id: Uuid,
     ) -> Result<(), AppError> {
-        self.repository
-            .revision_owned(session_id, revision_id)
-            .await
+        self.repository.revision_owned(principal, revision_id).await
     }
 
     pub async fn revision_document(&self, revision_id: Uuid) -> Result<(Uuid, String), AppError> {

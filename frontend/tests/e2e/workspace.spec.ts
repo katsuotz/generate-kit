@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
 });
 
 test('starts in focused intake, validates, and reveals the proof workspace on request', async ({
@@ -141,18 +141,23 @@ test('reopens saved generated work directly in the proof workspace', async ({ pa
   await expect(page.getByLabel('PDF page 1')).toBeVisible();
 });
 
-test('continues editing when autosave storage is unavailable', async ({ page }) => {
-  await page.evaluate(() => {
-    const setItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      if (key === 'latex-renderer.cv-builder.v1') {
-        throw new DOMException('full', 'QuotaExceededError');
-      }
-      return setItem.call(this, key, value);
-    };
+test('continues editing when remote autosave is unavailable', async ({ page }) => {
+  await page.route('**/api/v1/cv/session', async (route) => {
+    if (route.request().method() === 'PUT') {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'service_unavailable', message: 'Autosave is offline.' })
+      });
+      return;
+    }
+    await route.continue();
   });
+  await page.reload();
+  await expect(page.getByText('Ready to start')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
   await page.getByLabel(/Full name/).fill('Ada Lovelace');
-  await expect(page.getByText(/Autosave is unavailable/)).toBeVisible();
+  await expect(page.getByText(/Could not save this draft/)).toBeVisible();
   await page.getByLabel('Email').fill('ada@example.com');
   await page.getByRole('button', { name: 'Generate CV' }).click();
   await expect(page.getByLabel('PDF page 1')).toBeVisible();

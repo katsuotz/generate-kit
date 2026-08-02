@@ -1,6 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BackendApiError, BackendClient } from '$lib/api/backendClient';
+  import {
+    BackendApiError,
+    BackendClient,
+    type AuthUser,
+    type CvSessionDraft,
+    type CvSessionResponse
+  } from '$lib/api/backendClient';
   import { generateCv, templates } from '$lib/cv/generator';
   import {
     blankCv,
@@ -12,7 +18,7 @@
     type CvSectionId,
     type CvValidationError
   } from '$lib/cv/model';
-  import { fingerprintCv, loadCvRecord, saveCvRecord } from '$lib/cv/storage';
+  import { fingerprintCv } from '$lib/cv/storage';
   import { BackendPreviewAdapter } from '$lib/preview/backendPreviewAdapter';
   import { PreviewController, type PreviewState } from '$lib/workspace/previewController';
   import PreviewPane from './PreviewPane.svelte';
@@ -51,6 +57,21 @@
   let lastGeneratedSource = '';
   let generatedFingerprint = '';
   let generatedAt: string | null = null;
+  let cvSessionId: string | null = null;
+  let cvSessionVersion = 0;
+  let autosaveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
+  let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let autosaveInFlight = false;
+  let autosavePromise: Promise<boolean> | null = null;
+  let autosaveQueued = false;
+  let authUser: AuthUser | null = null;
+  let authOpen = false;
+  let authMode: 'login' | 'register' = 'login';
+  let authEmail = '';
+  let authPassword = '';
+  let authName = '';
+  let authBusy = false;
+  let authNotice = '';
   let errors: CvValidationError[] = [];
   let notice = '';
   let state: PreviewState = {
@@ -59,29 +80,87 @@
     lastSuccess: null,
     diagnostics: []
   };
-  const backendAdapter = new BackendPreviewAdapter(new BackendClient());
+  const backendClient = new BackendClient();
+  const backendAdapter = new BackendPreviewAdapter(backendClient);
   let controller: PreviewController | null = null;
   let controllerReady = false;
   $: currentFingerprint = fingerprintCv(data);
   $: dirty = currentFingerprint !== generatedFingerprint;
   $: sectionIndex = SECTION_ORDER.indexOf(activeSection);
 
-  function persist() {
-    if (typeof localStorage === 'undefined') return true;
-    return saveCvRecord(localStorage, {
-      version: 1,
-      data,
+  function sessionDraft(): CvSessionDraft {
+    return {
+      schemaVersion: 1,
+      data: structuredClone(data),
       templateId,
       lastGeneratedSource,
       generatedAt,
       fingerprint: generatedFingerprint
-    });
+    };
   }
+
+  async function flushAutosave(force = false): Promise<boolean> {
+    if (!cvSessionId) return false;
+    if (autosaveInFlight) {
+      autosaveQueued = true;
+      if (force && autosaveTimer) clearTimeout(autosaveTimer);
+      if (autosavePromise) await autosavePromise;
+      return force && autosaveQueued ? flushAutosave(true) : true;
+    }
+    autosaveInFlight = true;
+    autosaveQueued = false;
+    autosaveStatus = 'saving';
+    const draft = sessionDraft();
+    autosavePromise = (async () => {
+      const saved = await backendClient.saveCvSession(cvSessionId, draft, cvSessionVersion);
+      cvSessionVersion = saved.version;
+      autosaveStatus = 'saved';
+      return true;
+    })().catch(async (error) => {
+      if (error instanceof BackendApiError && error.status === 409) {
+        try {
+          const latest = await backendClient.getCvSession();
+          hydrateSession(latest);
+          notice = 'This CV changed in another session. The latest saved version is loaded.';
+          autosaveStatus = 'saved';
+        } catch {
+          autosaveStatus = 'error';
+          notice = 'Autosave found a newer version, but could not recover it yet.';
+        }
+      } else {
+        autosaveStatus = 'error';
+        notice = 'Could not save this draft; your edits remain available in this tab.';
+      }
+      return false;
+    });
+    const result = await autosavePromise;
+    autosavePromise = null;
+    autosaveInFlight = false;
+    if (autosaveQueued) {
+      if (force) {
+        autosaveQueued = false;
+        return flushAutosave(true);
+      }
+      scheduleAutosave();
+    }
+    return result;
+  }
+
+  function scheduleAutosave() {
+    if (!cvSessionId) return;
+    autosaveQueued = true;
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      autosaveTimer = undefined;
+      void flushAutosave();
+    }, 700);
+  }
+
   function changed() {
     data = structuredClone(data);
     if (errors.length) errors = validateCv(data);
     notice = '';
-    if (!persist()) notice = 'Autosave is unavailable; your edits still work in this tab.';
+    scheduleAutosave();
   }
   function add(section: EntrySection) {
     const next = structuredClone(data) as unknown as Record<
@@ -156,19 +235,19 @@
       generatedFingerprint = currentFingerprint;
       presentation = 'workspace';
       mobilePane = 'preview';
-      const saved = persist();
+      const saved = await flushAutosave(true);
       notice = saved
         ? 'Source generated. Setting the proof…'
-        : 'Autosave is unavailable; setting the proof in this tab…';
+        : 'Remote save is unavailable; setting the proof in this tab…';
       await controller.compile(lastGeneratedSource);
       notice =
         state.status === 'success'
           ? saved
             ? 'CV generated and proof ready.'
-            : 'CV generated and proof ready; autosave remains unavailable.'
+            : 'CV generated and proof ready; the draft remains in this tab.'
           : saved
             ? 'Source generated, but the proof could not be completed.'
-            : 'Source generated in this tab, but autosave and proofing are unavailable.';
+            : 'Source generated in this tab, but the draft could not be saved.';
     } catch (error) {
       notice = error instanceof Error ? error.message : 'Could not generate the CV.';
     }
@@ -228,22 +307,73 @@
     document.querySelector('.builder-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function hydrateSession(session: CvSessionResponse) {
+    cvSessionId = session.id;
+    cvSessionVersion = session.version;
+    data = session.data;
+    templateId = session.templateId;
+    lastGeneratedSource = session.lastGeneratedSource;
+    generatedAt = session.generatedAt;
+    generatedFingerprint = session.fingerprint || (lastGeneratedSource ? fingerprintCv(data) : '');
+    presentation = lastGeneratedSource ? 'workspace' : 'intake';
+  }
+
+  function openAuth(mode: 'login' | 'register') {
+    authMode = mode;
+    authOpen = true;
+    authNotice = '';
+  }
+
+  async function submitAuth() {
+    authBusy = true;
+    authNotice = '';
+    try {
+      authUser =
+        authMode === 'login'
+          ? await backendClient.login(authEmail, authPassword)
+          : await backendClient.register(authEmail, authPassword, authName);
+      try {
+        const accountSession = await backendClient.getCvSession();
+        hydrateSession(accountSession);
+      } catch (error) {
+        if (!(error instanceof BackendApiError) || error.status !== 404) throw error;
+        const accountSession = await backendClient.createCvSession(sessionDraft());
+        hydrateSession(accountSession);
+      }
+      authOpen = false;
+      authPassword = '';
+      notice =
+        authMode === 'login'
+          ? 'Signed in; your CV session is synced.'
+          : 'Account created; your CV session is synced.';
+    } catch (error) {
+      authNotice =
+        error instanceof Error ? error.message : 'Account action could not be completed.';
+    } finally {
+      authBusy = false;
+    }
+  }
+
+  async function logout() {
+    try {
+      await backendClient.logout();
+      authUser = null;
+      notice = 'Signed out. You can keep editing anonymously.';
+    } catch (error) {
+      notice = error instanceof Error ? error.message : 'Could not sign out.';
+    }
+  }
+
   onMount(() => {
     let active = true;
-    const saved = loadCvRecord(
-      localStorage,
-      () => (notice = 'Saved CV data could not be restored; a blank dossier was opened.')
-    );
-    if (saved) {
-      data = saved.data;
-      templateId = saved.templateId;
-      lastGeneratedSource = saved.lastGeneratedSource;
-      generatedAt = saved.generatedAt;
-      generatedFingerprint = saved.fingerprint;
-      if (saved.lastGeneratedSource) presentation = 'workspace';
-    }
     void (async () => {
       try {
+        const user = await backendClient.getCurrentUser();
+        if (!active) return;
+        authUser = user;
+        const session = await backendClient.bootstrapCvSession(sessionDraft());
+        if (!active) return;
+        hydrateSession(session);
         await backendAdapter.initialize(lastGeneratedSource);
         if (!active) return;
         controller = new PreviewController(backendAdapter, (next) => (state = next));
@@ -272,6 +402,7 @@
     })();
     return () => {
       active = false;
+      if (autosaveTimer) clearTimeout(autosaveTimer);
       controller?.dispose();
       void backendAdapter?.cancel();
     };
@@ -296,6 +427,90 @@
       </div>
     </div>
     <div class="header-actions">
+      <div class="account-controls">
+        {#if authUser}
+          <span class="account-label" title={authUser.email}>{authUser.email}</span>
+          <button class="button button-secondary account-button" type="button" on:click={logout}>
+            Log out
+          </button>
+        {:else}
+          <button
+            class="button button-secondary account-button"
+            type="button"
+            on:click={() => openAuth('login')}>
+            Log in
+          </button>
+          <button
+            class="button button-secondary account-button register-button"
+            type="button"
+            on:click={() => openAuth('register')}>
+            Register
+          </button>
+        {/if}
+        {#if authOpen}
+          <div
+            class="account-panel"
+            role="dialog"
+            aria-label={authMode === 'login' ? 'Log in' : 'Create account'}>
+            <div class="account-panel-heading">
+              <div>
+                <p class="panel-kicker">Optional account</p>
+                <h2>{authMode === 'login' ? 'Welcome back' : 'Save your CV everywhere'}</h2>
+              </div>
+              <button
+                class="close-button"
+                type="button"
+                aria-label="Close account form"
+                on:click={() => (authOpen = false)}>
+                ×
+              </button>
+            </div>
+            <p class="account-helper">Anonymous editing stays available without signing in.</p>
+            <form on:submit|preventDefault={submitAuth}>
+              {#if authMode === 'register'}
+                <label>
+                  <span>Name</span>
+                  <input class="cv-input" bind:value={authName} autocomplete="name" />
+                </label>
+              {/if}
+              <label>
+                <span>Email</span>
+                <input
+                  class="cv-input"
+                  bind:value={authEmail}
+                  type="email"
+                  autocomplete="email"
+                  required />
+              </label>
+              <label>
+                <span>Password</span>
+                <input
+                  class="cv-input"
+                  bind:value={authPassword}
+                  type="password"
+                  autocomplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                  minlength="12"
+                  required />
+              </label>
+              {#if authNotice}<p class="account-error" role="alert">{authNotice}</p>{/if}
+              <button
+                class="button button-primary account-submit"
+                type="submit"
+                disabled={authBusy}>
+                {authBusy ? 'Working…' : authMode === 'login' ? 'Log in' : 'Create account'}
+              </button>
+            </form>
+            <button
+              class="account-switch"
+              type="button"
+              on:click={() => openAuth(authMode === 'login' ? 'register' : 'login')}>
+              {authMode === 'login'
+                ? 'Need an account? Register'
+                : 'Already have an account? Log in'}
+            </button>
+          </div>
+        {/if}
+      </div>
       <span
         class="proof-status"
         class:is-loading={state.status === 'loading'}
@@ -944,6 +1159,112 @@
     gap: 12px;
   }
 
+  .account-controls {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .account-button {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 9px;
+  }
+
+  .account-label {
+    max-width: 150px;
+    overflow: hidden;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-panel {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 14px);
+    right: 0;
+    width: min(360px, calc(100vw - 32px));
+    border: 1px solid var(--rule-strong);
+    border-radius: 10px;
+    padding: 20px;
+    background: var(--surface);
+    box-shadow: 0 18px 42px rgb(23 33 43 / 16%);
+  }
+
+  .account-panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .account-panel h2 {
+    margin: 4px 0 0;
+    font-size: 20px;
+    letter-spacing: -0.03em;
+  }
+
+  .account-helper {
+    margin: 10px 0 18px;
+    color: var(--muted-ink);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .account-panel form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .account-panel label > span {
+    margin-bottom: 6px;
+  }
+
+  .account-submit {
+    width: 100%;
+    margin-top: 3px;
+  }
+
+  .account-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .account-switch,
+  .close-button {
+    border: 0;
+    background: transparent;
+    color: var(--blue-dark);
+    cursor: pointer;
+  }
+
+  .account-switch {
+    margin-top: 15px;
+    padding: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .account-switch:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .close-button {
+    width: 28px;
+    height: 28px;
+    color: var(--muted-ink);
+    font-size: 22px;
+    line-height: 1;
+  }
+
   .proof-status {
     display: inline-flex;
     align-items: center;
@@ -1566,6 +1887,17 @@
     .generate-button {
       padding: 0 11px;
       font-size: 9px;
+    }
+
+    .register-button,
+    .account-label {
+      display: none;
+    }
+
+    .account-panel {
+      position: fixed;
+      top: 68px;
+      right: 16px;
     }
 
     .builder-scroll {

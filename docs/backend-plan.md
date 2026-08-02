@@ -72,7 +72,7 @@ Compile jobs return queued/running/succeeded/failed/cancelled states and structu
 - Add artifact retention cleanup and anonymous quota enforcement.
 - Add deployment configuration, metrics, CI, and PostgreSQL integration tests.
 - Continue frontend integration hardening, richer diagnostic navigation, and production deployment checks.
-- Add account authentication only when the product requires multi-user ownership.
+- Add password reset, email verification, MFA, and role-based administration only if the product requires them.
 
 ## Verification
 

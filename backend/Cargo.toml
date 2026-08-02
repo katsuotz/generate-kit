@@ -11,8 +11,13 @@ path = "src/main.rs"
 name = "latex-renderer-worker"
 path = "src/bin/worker.rs"
 
+[[bin]]
+name = "seed"
+path = "src/bin/seed.rs"
+
 [dependencies]
 async-trait = "0.1"
+argon2 = "0.5"
 axum = "0.8"
 base64 = "0.22"
 dotenvy = "0.15"

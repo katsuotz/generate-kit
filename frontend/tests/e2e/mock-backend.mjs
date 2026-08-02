@@ -3,6 +3,8 @@ import { createServer } from 'node:http';
 const port = 18733;
 const documents = new Map();
 const jobs = new Map();
+const cvSessions = new Map();
+const users = new Map();
 let sequence = 0;
 
 function id(prefix) {
@@ -39,7 +41,8 @@ const pdf = makePdf();
 
 function json(response, status, value) {
   response.writeHead(status, {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': 'http://127.0.0.1:5173',
     'Content-Type': 'application/json'
   });
   response.end(JSON.stringify(value));
@@ -57,9 +60,10 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:5173'
     });
     response.end();
     return;
@@ -69,11 +73,80 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.method === 'POST' && path === '/api/v1/sessions/anonymous') {
+    const sessionId = request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1] ?? id('session');
+    response.setHeader('Set-Cookie', `lr_session=${sessionId}; Path=/; SameSite=Lax`);
     json(response, 201, {
-      session_id: id('session'),
+      session_id: sessionId,
       token: 'e2e-token',
       expires_at: '2099-01-01T00:00:00Z'
     });
+    return;
+  }
+
+  if (request.method === 'GET' && path === '/api/v1/auth/me') {
+    const user = users.get(request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1]);
+    json(
+      response,
+      user ? 200 : 401,
+      user ? { user } : { code: 'unauthorized', message: 'Not signed in.' }
+    );
+    return;
+  }
+  if (
+    request.method === 'POST' &&
+    (path === '/api/v1/auth/login' || path === '/api/v1/auth/register')
+  ) {
+    const input = await body(request);
+    const user = { id: id('user'), email: input.email, name: input.name ?? null };
+    const userToken = id('user-session');
+    users.set(userToken, user);
+    const previousToken = request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1];
+    if (path.endsWith('/register') && previousToken && cvSessions.has(previousToken)) {
+      cvSessions.set(userToken, cvSessions.get(previousToken));
+    }
+    response.setHeader('Set-Cookie', `lr_session=${userToken}; Path=/; SameSite=Lax`);
+    json(response, 200, { user });
+    return;
+  }
+  if (request.method === 'POST' && path === '/api/v1/auth/logout') {
+    response.setHeader('Set-Cookie', 'lr_session=; Path=/; Max-Age=0; SameSite=Lax');
+    response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:5173'
+    });
+    response.end();
+    return;
+  }
+
+  if (request.method === 'GET' && path === '/api/v1/cv/session') {
+    const sessionId = request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1];
+    const session = sessionId ? cvSessions.get(sessionId) : undefined;
+    json(response, session ? 200 : 404, session ?? { code: 'not_found', message: 'Not found' });
+    return;
+  }
+  if (request.method === 'POST' && path === '/api/v1/cv/session') {
+    const input = await body(request);
+    const sessionId = request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1] ?? id('session');
+    const session = { id: id('cv-session'), version: 1, ...input };
+    cvSessions.set(sessionId, session);
+    json(response, 201, session);
+    return;
+  }
+  if (request.method === 'PUT' && path === '/api/v1/cv/session') {
+    const sessionId = request.headers.cookie?.match(/lr_session=([^;]+)/)?.[1];
+    const current = sessionId ? cvSessions.get(sessionId) : undefined;
+    const input = await body(request);
+    if (!current) {
+      json(response, 404, { code: 'not_found', message: 'Not found' });
+      return;
+    }
+    if (input.expected_version !== current.version) {
+      json(response, 409, { code: 'version_conflict', message: 'Draft changed elsewhere.' });
+      return;
+    }
+    const updated = { ...current, ...input, version: current.version + 1 };
+    cvSessions.set(sessionId, updated);
+    json(response, 200, updated);
     return;
   }
   if (request.method === 'POST' && path === '/api/v1/projects') {
@@ -164,14 +237,18 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (jobPath && request.method === 'DELETE') {
-    response.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
+    response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:5173'
+    });
     response.end();
     return;
   }
 
   if (request.method === 'GET' && /^\/api\/v1\/artifacts\/[^/]+$/.test(path)) {
     response.writeHead(200, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:5173',
       'Content-Length': pdf.byteLength,
       'Content-Type': 'application/pdf'
     });

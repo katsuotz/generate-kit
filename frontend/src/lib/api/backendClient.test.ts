@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackendClient } from './backendClient';
+import { blankCv } from '$lib/cv/model';
 
 const session = {
   session_id: 'session-1',
@@ -16,13 +17,21 @@ const document = {
   source: 'initial source'
 };
 
+const draft = {
+  schemaVersion: 1,
+  data: blankCv(),
+  templateId: 'editorial-v1',
+  lastGeneratedSource: '',
+  generatedAt: null,
+  fingerprint: ''
+};
+
 describe('BackendClient', () => {
   beforeEach(() => {
-    localStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it('creates and persists an anonymous document workspace', async () => {
+  it('creates an anonymous document workspace without browser storage', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(session))
@@ -34,25 +43,49 @@ describe('BackendClient', () => {
 
     expect(result).toEqual(document);
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(JSON.parse(localStorage.getItem('latex-renderer.workspace.v1') ?? '{}')).toEqual({
-      projectId: 'project-1',
-      documentId: 'document-1'
+    expect(localStorage.length).toBe(0);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include' });
+  });
+
+  it('hydrates or creates the server-backed CV session and serializes metadata', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(session))
+      .mockResolvedValueOnce(jsonResponse({ code: 'not_found' }, 404))
+      .mockResolvedValueOnce(jsonResponse({ id: 'cv-1', version: 1, ...draft }, 201))
+      .mockResolvedValueOnce(jsonResponse({ id: 'cv-1', version: 2, ...draft }));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new BackendClient();
+
+    await expect(client.bootstrapCvSession(draft)).resolves.toMatchObject({
+      id: 'cv-1',
+      version: 1
+    });
+    await expect(client.saveCvSession('cv-1', draft, 1)).resolves.toMatchObject({ version: 2 });
+
+    expect(fetchMock.mock.calls[2]?.[0]).toContain('/api/v1/cv/session');
+    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toMatchObject({
+      schema_version: 1,
+      template_id: 'editorial-v1',
+      generated_source: '',
+      expected_version: 1
     });
   });
 
-  it('restores a persisted document instead of creating another project', async () => {
-    localStorage.setItem('latex-renderer.session.v1', JSON.stringify(session));
-    localStorage.setItem(
-      'latex-renderer.workspace.v1',
-      JSON.stringify({ projectId: 'project-1', documentId: 'document-1' })
-    );
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(document));
+  it('supports cookie-backed account actions without requiring anonymous auth', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ user: { id: 'user-1', email: 'ada@example.com' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
+    const client = new BackendClient();
 
-    await expect(new BackendClient().loadDocument('unused source')).resolves.toEqual(document);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain('/api/v1/documents/document-1');
+    await expect(client.login('ada@example.com', 'password123')).resolves.toMatchObject({
+      email: 'ada@example.com'
+    });
+    await expect(client.logout()).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('/api/v1/auth/login');
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include' });
   });
 });
 

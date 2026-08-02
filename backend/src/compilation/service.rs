@@ -6,6 +6,7 @@ use super::{
     model::{CompileJobResponse, Diagnostic},
     repository::CompilationRepository,
 };
+use crate::sessions::model::Principal;
 use crate::{documents::DocumentService, error::AppError};
 
 #[derive(Clone)]
@@ -27,7 +28,7 @@ impl CompilationService {
 
     pub async fn create_job(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         document_id: Uuid,
         revision_id: Uuid,
         profile: &str,
@@ -36,10 +37,10 @@ impl CompilationService {
             return Err(AppError::BadRequest("unsupported compile profile".into()));
         }
         self.documents
-            .document_owned(session_id, document_id)
+            .document_owned(principal, document_id)
             .await?;
         self.documents
-            .revision_owned(session_id, revision_id)
+            .revision_owned(principal, revision_id)
             .await?;
         let (revision_document, _) = self.documents.revision_document(revision_id).await?;
         if revision_document != document_id {
@@ -53,25 +54,25 @@ impl CompilationService {
 
     pub async fn get_job(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         job_id: Uuid,
     ) -> Result<CompileJobResponse, AppError> {
-        self.repository.job_owned(session_id, job_id).await?;
+        self.repository.job_owned(principal, job_id).await?;
         self.repository.get_job(job_id).await
     }
 
-    pub async fn cancel_job(&self, session_id: Uuid, job_id: Uuid) -> Result<(), AppError> {
-        self.repository.job_owned(session_id, job_id).await?;
+    pub async fn cancel_job(&self, principal: &Principal, job_id: Uuid) -> Result<(), AppError> {
+        self.repository.job_owned(principal, job_id).await?;
         self.repository.cancel_job(job_id).await
     }
 
     pub async fn get_artifact(
         &self,
-        session_id: Uuid,
+        principal: &Principal,
         artifact_id: Uuid,
     ) -> Result<Vec<u8>, AppError> {
         self.repository
-            .artifact_owned(session_id, artifact_id)
+            .artifact_owned(principal, artifact_id)
             .await?;
         self.repository.get_artifact(artifact_id).await
     }

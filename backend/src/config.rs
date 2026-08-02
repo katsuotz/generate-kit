@@ -23,6 +23,7 @@ pub struct Config {
     pub compiler_path: PathBuf,
     pub compile_timeout: Duration,
     pub session_ttl: Duration,
+    pub cookie_secure: bool,
 }
 
 impl Config {
@@ -62,6 +63,12 @@ impl Config {
                 .ok()
                 .unwrap_or_else(|| "2592000".into()),
         )?);
+        let cookie_secure = parse(
+            "COOKIE_SECURE",
+            env::var("COOKIE_SECURE")
+                .ok()
+                .unwrap_or_else(|| "false".into()),
+        )?;
 
         Ok(Self {
             database_url,
@@ -71,7 +78,12 @@ impl Config {
             compiler_path,
             compile_timeout,
             session_ttl,
+            cookie_secure,
         })
+    }
+
+    pub fn origin_is_allowed(&self, origin: &HeaderValue) -> bool {
+        origin == &self.frontend_origin
     }
 }
 

@@ -7,7 +7,7 @@ use axum::{
 use uuid::Uuid;
 
 use super::model::{CompileJobResponse, CompileRequest};
-use crate::sessions::routes::bearer_token;
+use crate::sessions::routes::validate_origin;
 use crate::{AppState, error::AppError};
 
 pub async fn create_compile_job(
@@ -16,14 +16,12 @@ pub async fn create_compile_job(
     Path(document_id): Path<Uuid>,
     Json(request): Json<CompileRequest>,
 ) -> Result<(StatusCode, Json<CompileJobResponse>), AppError> {
-    let session_id = state
-        .sessions
-        .authenticate_token(bearer_token(&headers)?)
-        .await?;
+    validate_origin(&headers, &state.config, true)?;
+    let principal = state.sessions.authenticate(&headers).await?;
     let job = state
         .compilation
         .create_job(
-            session_id,
+            &principal,
             document_id,
             request.revision_id,
             &request.profile,
@@ -37,11 +35,8 @@ pub async fn get_compile_job(
     headers: HeaderMap,
     Path(job_id): Path<Uuid>,
 ) -> Result<Json<CompileJobResponse>, AppError> {
-    let session_id = state
-        .sessions
-        .authenticate_token(bearer_token(&headers)?)
-        .await?;
-    Ok(Json(state.compilation.get_job(session_id, job_id).await?))
+    let principal = state.sessions.authenticate(&headers).await?;
+    Ok(Json(state.compilation.get_job(&principal, job_id).await?))
 }
 
 pub async fn cancel_compile_job(
@@ -49,11 +44,9 @@ pub async fn cancel_compile_job(
     headers: HeaderMap,
     Path(job_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    let session_id = state
-        .sessions
-        .authenticate_token(bearer_token(&headers)?)
-        .await?;
-    state.compilation.cancel_job(session_id, job_id).await?;
+    validate_origin(&headers, &state.config, true)?;
+    let principal = state.sessions.authenticate(&headers).await?;
+    state.compilation.cancel_job(&principal, job_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -62,13 +55,10 @@ pub async fn get_artifact(
     headers: HeaderMap,
     Path(artifact_id): Path<Uuid>,
 ) -> Result<Response, AppError> {
-    let session_id = state
-        .sessions
-        .authenticate_token(bearer_token(&headers)?)
-        .await?;
+    let principal = state.sessions.authenticate(&headers).await?;
     let bytes = state
         .compilation
-        .get_artifact(session_id, artifact_id)
+        .get_artifact(&principal, artifact_id)
         .await?;
     Response::builder()
         .status(StatusCode::OK)

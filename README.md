@@ -98,6 +98,13 @@ The Compose API and worker are built from `backend/Dockerfile`. The worker image
 - `GET /health/live`
 - `GET /health/ready`
 - `POST /api/v1/sessions/anonymous`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/cv/session`
+- `POST /api/v1/cv/session`
+- `PUT /api/v1/cv/session`
 - `POST /api/v1/projects`
 - `POST /api/v1/projects/{project_id}/documents`
 - `GET /api/v1/documents/{document_id}`
@@ -123,7 +130,7 @@ Implemented:
 
 Deferred:
 
-- User authentication and multi-user ownership
+- Password reset, email verification, MFA, and role-based administration
 - Active compiler-process cancellation and stronger resource isolation
 - Artifact retention cleanup, quotas, and observability
 - CI and production deployment configuration
