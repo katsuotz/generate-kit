@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
 });
