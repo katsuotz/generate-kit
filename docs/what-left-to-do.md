@@ -1,34 +1,42 @@
 # What’s left to do
 
-The frontend foundation and backend-backed preview flow are implemented in `frontend/` and `backend/`. The repository is a pnpm/Rust monorepo with root workspace metadata and `pnpm-lock.yaml`. Browser tests use a deterministic HTTP fixture for the backend PDF contract; the XeLaTeX worker is opt-in through the backend environment.
+The core CV workflow is implemented: the SvelteKit frontend provides structured intake, generated LaTeX source, PDF preview, diagnostics, downloads, and responsive editor/preview navigation. The Rust backend provides anonymous and account sessions, persisted CV drafts and document revisions, queued XeLaTeX jobs, cancellation requests, and bounded PDF artifacts. Frontend unit/component tests and deterministic Playwright smoke tests are in place.
 
-## Frontend foundation follow-up
+This list reflects the remaining work in the current repository.
 
-- [ ] Decide whether drafts should remain ephemeral or persist locally/remotely.
-- [ ] Add CI for `pnpm --filter @latex-renderer/frontend check`, `lint`, `test`, `test:e2e`, and `build`.
-- [ ] Expand browser-level accessibility coverage and complete a screen-reader pass.
-- [x] Replace the mock adapter with the backend job API and PDF.js artifact loading.
-- [x] Map backend diagnostics to CodeMirror line/column locations; richer navigation remains follow-up work.
-- [ ] Add document/project navigation only if multi-document editing is required.
+## Product and workflow
 
-## Backend and compiler integration
+- [ ] Decide whether to add browser-local or offline draft recovery. Current drafts autosave to the backend, and editing continues in the current tab when remote autosave fails.
+- [ ] Improve optimistic-conflict recovery and add multi-tab coordination if users need concurrent editing. The current flow loads the latest saved version but does not merge changes.
+- [ ] Add richer compiler-diagnostic navigation, including file/line/column decorations and direct movement between diagnostics.
+- [ ] Add document and project navigation only if the product expands beyond the current single-CV workflow.
+- [ ] Define whether collaboration, sharing, or a broader document model belongs on the roadmap.
 
-- [x] Create the backend service under `backend/` with Rust build/test conventions.
-- [x] Add PostgreSQL 19 UUIDv7 migrations and persisted document/revision storage.
-- [x] Add PostgreSQL-backed compile jobs, structured diagnostics, and artifact endpoints.
-- [x] Pin the development XeLaTeX worker image with the CV package/font set and enable the `cv-xelatex` profile.
-- [ ] Add active process cancellation, resource enforcement, retention cleanup, and quotas.
-- [x] Choose PDF artifacts as the preview representation and render them with PDF.js.
-- [x] Use queued PostgreSQL-backed compilation with frontend polling.
-- [x] Define cancellation, timeout, stale-result, request-size, artifact-size, and response semantics for the first integration.
-- [x] Define the initial `cv-xelatex` engine profile, package/font image, PDF output, and structured diagnostics.
-- [ ] Design compiler isolation, filesystem restrictions, network policy, resource limits, and cleanup.
-- [x] Implement the real frontend preview adapter against the backend contract.
+## Authentication and account lifecycle
 
-## Product and operations
+- [ ] Add password reset and email verification if accounts become a supported production workflow.
+- [ ] Decide whether MFA, account deletion, and role-based administration are required.
+- [ ] Define session and anonymous-data retention rules, including what happens when an anonymous session expires without registration.
 
-- [ ] Decide document persistence, authentication, authorization, retention, and quotas.
-- [ ] Confirm deployment targets and environment configuration for `frontend/` and `backend/`.
-- [ ] Add observability for compile latency, failures, cancellation, and resource usage.
-- [ ] Establish error reporting and user-facing support flows.
-- [ ] Define the minimum viable document model and any collaboration roadmap.
+## Compiler reliability and security
+
+- [ ] Make cancellation stop an active compiler process. The API records cancellation requests and queued jobs can be cancelled, but a running XeLaTeX process is currently observed only after it returns or reaches its timeout.
+- [ ] Add process/container resource enforcement beyond the application timeout, including CPU, memory, and process limits.
+- [ ] Define and enforce compiler filesystem and network policy. The current worker uses temporary directories and `-no-shell-escape`, but isolation policy is not yet a complete production boundary.
+- [ ] Bound compiler stdout/stderr capture and add deterministic worker/compiler integration fixtures.
+- [ ] Add artifact cleanup and session cleanup jobs. Artifacts receive a seven-day expiry, but expired rows and old sessions are not currently swept.
+- [ ] Add per-account or per-session quotas and request/rate limits.
+
+## Testing and operations
+
+- [ ] Add CI for frontend check, lint, unit tests, end-to-end tests, and build.
+- [ ] Add CI for Rust formatting, locked checks/tests, migrations, and backend route/repository/worker integration coverage.
+- [ ] Expand browser accessibility coverage beyond the current automated Axe smoke test, including keyboard flows and a screen-reader pass.
+- [ ] Add metrics and error reporting for request failures, compile latency, queue depth, cancellations, timeouts, artifact usage, and worker resource use.
+- [ ] Establish deployment targets, production environment configuration, secrets handling, database migration policy, and backup/restore procedures.
+- [ ] Define user-facing support and recovery flows for failed saves, expired sessions, failed compilation, and unavailable workers.
+
+## Deferred infrastructure
+
+- [ ] Introduce Redis only if distributed queueing, rate limiting, or coordination requirements justify it.
+- [ ] Revisit the PostgreSQL 19 beta development dependency before production deployment.

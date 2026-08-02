@@ -1,6 +1,6 @@
 # LaTeX Renderer
 
-LaTeX Renderer is a pnpm/Rust monorepo for editing LaTeX documents and previewing compiled PDFs. The current product is focused on CV workflows: the SvelteKit frontend provides the editor experience, while the Rust backend persists documents and queues isolated XeLaTeX compilation jobs.
+LaTeX Renderer is a pnpm/Rust monorepo for editing LaTeX documents and previewing compiled PDFs. The current product focuses on CV workflows, with a SvelteKit frontend and a Rust/Axum backend that stores documents and runs isolated XeLaTeX jobs.
 
 ## Repository layout
 
@@ -8,12 +8,12 @@ LaTeX Renderer is a pnpm/Rust monorepo for editing LaTeX documents and previewin
 .
 ├── frontend/       SvelteKit, Svelte 5, Tailwind CSS 4, CodeMirror, PDF.js
 ├── backend/        Rust/Axum API and PostgreSQL-backed compilation worker
-├── docs/           Frontend plan, backend plan, and remaining work
+├── docs/           Architecture plans and backlog
 ├── package.json    Root pnpm workspace metadata
-└── pnpm-lock.yaml  Shared JavaScript dependency lockfile
+└── pnpm-lock.yaml  Shared dependency lockfile
 ```
 
-The backend remains a single Rust crate. Its code is organized by feature (`sessions`, `documents`, and `compilation`) with repositories for persistence and services for business logic. Redis is intentionally not required yet.
+The backend is a single Rust crate organized by feature. Redis is not required.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ The backend remains a single Rust crate. Its code is organized by feature (`sess
 - Rust and Cargo
 - Docker Desktop with Compose
 
-The development stack uses PostgreSQL 19 Beta 2. It is pre-release software and should be used for development and compatibility testing only.
+The development stack uses PostgreSQL 19 Beta 2, which is pre-release software.
 
 ## Local setup
 
@@ -31,14 +31,12 @@ Install frontend dependencies from the repository root:
 pnpm install
 ```
 
-Create local environment files if they do not already exist:
+Create local environment files:
 
 ```powershell
 Copy-Item frontend/.env.example frontend/.env
 Copy-Item backend/.env.example backend/.env
 ```
-
-Environment files are ignored by Git. The committed `.env.example` files contain local-development placeholders only.
 
 Start PostgreSQL, the API, and the XeLaTeX worker:
 
@@ -60,16 +58,18 @@ Start the frontend in another terminal:
 pnpm --dir frontend dev
 ```
 
-Check the API health endpoints:
+Check that the API is running:
 
 ```powershell
 Invoke-WebRequest http://localhost:18732/health/live
 Invoke-WebRequest http://localhost:18732/health/ready
 ```
 
-## Frontend commands
+## Commands
 
-Run these from the repository root:
+Run these from the repository root.
+
+Frontend:
 
 ```powershell
 pnpm --dir frontend check
@@ -79,11 +79,7 @@ pnpm --dir frontend test:e2e
 pnpm --dir frontend build
 ```
 
-The frontend always uses the backend preview adapter and renders returned PDF artifacts with PDF.js. Playwright starts a deterministic HTTP fixture that implements the backend contract and returns a valid PDF artifact, so browser tests do not require a running compiler.
-
-## Backend commands
-
-Run these from the repository root:
+Backend:
 
 ```powershell
 cargo fmt --manifest-path backend/Cargo.toml -- --check
@@ -91,53 +87,16 @@ cargo check --manifest-path backend/Cargo.toml --locked --all-targets
 cargo test --manifest-path backend/Cargo.toml --locked
 ```
 
-The Compose API and worker are built from `backend/Dockerfile`. The worker image includes XeLaTeX, the CV-oriented LaTeX packages, Font Awesome, Roboto, Roboto Slab, and related font discovery support. Compilation runs with `-no-shell-escape`, a bounded timeout, temporary workspaces, and cleanup.
+The frontend renders returned PDF artifacts with PDF.js. End-to-end tests use a deterministic backend fixture, so they do not require a local XeLaTeX installation.
 
-## API surface
+The backend worker runs XeLaTeX with bounded time and output limits, `-no-shell-escape`, temporary workspaces, and cleanup.
 
-- `GET /health/live`
-- `GET /health/ready`
-- `POST /api/v1/sessions/anonymous`
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `GET /api/v1/auth/me`
-- `POST /api/v1/auth/logout`
-- `GET /api/v1/cv/session`
-- `POST /api/v1/cv/session`
-- `PUT /api/v1/cv/session`
-- `POST /api/v1/projects`
-- `POST /api/v1/projects/{project_id}/documents`
-- `GET /api/v1/documents/{document_id}`
-- `PUT /api/v1/documents/{document_id}`
-- `POST /api/v1/documents/{document_id}/compile`
-- `GET /api/v1/compile-jobs/{job_id}`
-- `DELETE /api/v1/compile-jobs/{job_id}`
-- `GET /api/v1/artifacts/{artifact_id}`
+## Project status
 
-The frontend creates or restores an anonymous session, persists document revisions, starts a compile job, polls its status, maps diagnostics to editor locations, and renders the resulting PDF with PDF.js.
+The core editor, PDF preview, anonymous sessions, document persistence, compile jobs, diagnostics, and CV-oriented XeLaTeX profile are implemented. Production deployment, account recovery, stronger isolation, retention policies, and richer project navigation remain on the backlog.
 
-## Current scope
-
-Implemented:
-
-- Responsive LaTeX editor and PDF preview workspace
-- Mouse and keyboard scrolling, pane resizing, and mobile pane navigation
-- Tailwind CSS 4 utility-based styling
-- Anonymous sessions and document/revision persistence
-- PostgreSQL-backed compile jobs and bounded PDF artifacts
-- Structured compiler diagnostics
-- XeLaTeX CV profile with common CV packages and fonts
-
-Deferred:
-
-- Password reset, email verification, MFA, and role-based administration
-- Active compiler-process cancellation and stronger resource isolation
-- Artifact retention cleanup, quotas, and observability
-- CI and production deployment configuration
-- Richer document/project navigation
-
-See [docs/what-left-to-do.md](docs/what-left-to-do.md) for the maintained backlog, [docs/frontend-plan.md](docs/frontend-plan.md) for frontend architecture, and [docs/backend-plan.md](docs/backend-plan.md) for backend architecture.
+See [docs/what-left-to-do.md](docs/what-left-to-do.md) for the backlog, [docs/frontend-plan.md](docs/frontend-plan.md) for frontend architecture, and [docs/backend-plan.md](docs/backend-plan.md) for backend architecture.
 
 ## Development notes
 
-Do not commit `.env` files, dependencies, build output, test reports, logs, or generated screenshots. PostgreSQL Beta 2 uses a dedicated Compose volume because beta catalog versions are not guaranteed to be compatible across releases.
+Do not commit `.env` files, dependencies, build output, test reports, logs, or generated screenshots. PostgreSQL Beta 2 uses a dedicated Compose volume because beta catalog versions may not be compatible across releases.
