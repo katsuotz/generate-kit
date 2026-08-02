@@ -2,11 +2,11 @@
   import { onMount } from 'svelte';
   import {
     BackendApiError,
-    BackendClient,
+    createBackendApi,
     type AuthUser,
     type CvSessionDraft,
     type CvSessionResponse
-  } from '$lib/api/backendClient';
+  } from '$lib/api';
   import { generateCv, templates } from '$lib/cv/generator';
   import {
     blankCv,
@@ -20,11 +20,19 @@
   } from '$lib/cv/model';
   import { fingerprintCv } from '$lib/cv/storage';
   import { BackendPreviewAdapter } from '$lib/preview/backendPreviewAdapter';
+  import { AccountService } from './accountService';
+  import {
+    copySource as copySourceToClipboard,
+    downloadPdf as downloadPdfFile,
+    downloadText as downloadTextFile
+  } from './downloads';
   import { PreviewController, type PreviewState } from '$lib/workspace/previewController';
-  import PreviewPane from './PreviewPane.svelte';
-  import Field from './cv/Field.svelte';
-  import EntryHead from './cv/EntryHead.svelte';
-  import AddButton from './cv/AddButton.svelte';
+  import { setupPreview } from './previewSetup';
+  import { SessionController } from './sessionController';
+  import PreviewPane from '../components/PreviewPane.svelte';
+  import Field from '../components/cv/Field.svelte';
+  import EntryHead from '../components/cv/EntryHead.svelte';
+  import AddButton from '../components/cv/AddButton.svelte';
 
   type EntrySection = Exclude<CvSectionId, 'summary'>;
   const labels: Record<CvSectionId, string> = {
@@ -57,13 +65,7 @@
   let lastGeneratedSource = '';
   let generatedFingerprint = '';
   let generatedAt: string | null = null;
-  let cvSessionId: string | null = null;
-  let cvSessionVersion = 0;
   let autosaveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
-  let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
-  let autosaveInFlight = false;
-  let autosavePromise: Promise<boolean> | null = null;
-  let autosaveQueued = false;
   let authUser: AuthUser | null = null;
   let authOpen = false;
   let authMode: 'login' | 'register' = 'login';
@@ -80,10 +82,12 @@
     lastSuccess: null,
     diagnostics: []
   };
-  const backendClient = new BackendClient();
-  const backendAdapter = new BackendPreviewAdapter(backendClient);
+  const backendApi = createBackendApi();
+  const backendAdapter = new BackendPreviewAdapter(backendApi.documents, backendApi.compilation);
   let controller: PreviewController | null = null;
   let controllerReady = false;
+  let sessionController: SessionController;
+  let accountService: AccountService;
   $: currentFingerprint = fingerprintCv(data);
   $: dirty = currentFingerprint !== generatedFingerprint;
   $: sectionIndex = SECTION_ORDER.indexOf(activeSection);
@@ -99,61 +103,25 @@
     };
   }
 
-  async function flushAutosave(force = false): Promise<boolean> {
-    if (!cvSessionId) return false;
-    if (autosaveInFlight) {
-      autosaveQueued = true;
-      if (force && autosaveTimer) clearTimeout(autosaveTimer);
-      if (autosavePromise) await autosavePromise;
-      return force && autosaveQueued ? flushAutosave(true) : true;
-    }
-    autosaveInFlight = true;
-    autosaveQueued = false;
-    autosaveStatus = 'saving';
-    const draft = sessionDraft();
-    autosavePromise = (async () => {
-      const saved = await backendClient.saveCvSession(cvSessionId, draft, cvSessionVersion);
-      cvSessionVersion = saved.version;
-      autosaveStatus = 'saved';
-      return true;
-    })().catch(async (error) => {
-      if (error instanceof BackendApiError && error.status === 409) {
-        try {
-          const latest = await backendClient.getCvSession();
-          hydrateSession(latest);
-          notice = 'This CV changed in another session. The latest saved version is loaded.';
-          autosaveStatus = 'saved';
-        } catch {
-          autosaveStatus = 'error';
-          notice = 'Autosave found a newer version, but could not recover it yet.';
-        }
-      } else {
-        autosaveStatus = 'error';
-        notice = 'Could not save this draft; your edits remain available in this tab.';
-      }
-      return false;
-    });
-    const result = await autosavePromise;
-    autosavePromise = null;
-    autosaveInFlight = false;
-    if (autosaveQueued) {
-      if (force) {
-        autosaveQueued = false;
-        return flushAutosave(true);
-      }
-      scheduleAutosave();
-    }
-    return result;
+  sessionController = new SessionController(backendApi.cvSession, {
+    getDraft: sessionDraft,
+    applySession: hydrateSession,
+    onStatus: (status) => (autosaveStatus = status),
+    onNotice: (message) => (notice = message)
+  });
+  accountService = new AccountService(
+    backendApi.auth,
+    backendApi.cvSession,
+    sessionDraft,
+    (session) => sessionController.hydrate(session)
+  );
+
+  function flushAutosave(force = false) {
+    return sessionController.flush(force);
   }
 
   function scheduleAutosave() {
-    if (!cvSessionId) return;
-    autosaveQueued = true;
-    if (autosaveTimer) clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(() => {
-      autosaveTimer = undefined;
-      void flushAutosave();
-    }, 700);
+    sessionController.schedule();
   }
 
   function changed() {
@@ -254,44 +222,24 @@
   }
   function downloadText() {
     if (!lastGeneratedSource) return;
-    downloadBlob(
-      new Blob([lastGeneratedSource], { type: 'application/x-tex' }),
-      `${fileStem()}-cv.tex`
-    );
-  }
-  function downloadPdf() {
-    if (state.lastSuccess?.representation !== 'pdf') return;
-    downloadBlob(
-      new Blob([state.lastSuccess.data], { type: 'application/pdf' }),
-      `${fileStem()}-cv.pdf`
-    );
-  }
-  function downloadBlob(blob: Blob, name: string) {
     try {
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = name;
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      downloadTextFile(lastGeneratedSource, data.identity.fullName);
     } catch {
       notice = 'The download could not be started in this browser.';
     }
   }
-  function fileStem() {
-    return (
-      data.identity.fullName
-        .trim()
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') || 'cv'
-    );
+  function downloadPdf() {
+    if (state.lastSuccess?.representation !== 'pdf') return;
+    try {
+      downloadPdfFile(state.lastSuccess, data.identity.fullName);
+    } catch {
+      notice = 'The download could not be started in this browser.';
+    }
   }
   async function copySource() {
     if (!lastGeneratedSource) return;
     try {
-      await navigator.clipboard.writeText(lastGeneratedSource);
+      await copySourceToClipboard(lastGeneratedSource);
       notice = 'Exact LaTeX source copied.';
     } catch {
       notice = 'Clipboard access was denied. Download the .tex file instead.';
@@ -308,8 +256,6 @@
   }
 
   function hydrateSession(session: CvSessionResponse) {
-    cvSessionId = session.id;
-    cvSessionVersion = session.version;
     data = session.data;
     templateId = session.templateId;
     lastGeneratedSource = session.lastGeneratedSource;
@@ -328,18 +274,8 @@
     authBusy = true;
     authNotice = '';
     try {
-      authUser =
-        authMode === 'login'
-          ? await backendClient.login(authEmail, authPassword)
-          : await backendClient.register(authEmail, authPassword, authName);
-      try {
-        const accountSession = await backendClient.getCvSession();
-        hydrateSession(accountSession);
-      } catch (error) {
-        if (!(error instanceof BackendApiError) || error.status !== 404) throw error;
-        const accountSession = await backendClient.createCvSession(sessionDraft());
-        hydrateSession(accountSession);
-      }
+      const result = await accountService.authenticate(authMode, authEmail, authPassword, authName);
+      authUser = result.user;
       authOpen = false;
       authPassword = '';
       notice =
@@ -356,7 +292,7 @@
 
   async function logout() {
     try {
-      await backendClient.logout();
+      await accountService.logout();
       authUser = null;
       notice = 'Signed out. You can keep editing anonymously.';
     } catch (error) {
@@ -368,16 +304,18 @@
     let active = true;
     void (async () => {
       try {
-        const user = await backendClient.getCurrentUser();
+        const user = await accountService.currentUser();
         if (!active) return;
         authUser = user;
-        const session = await backendClient.bootstrapCvSession(sessionDraft());
+        const session = await sessionController.bootstrap(sessionDraft());
         if (!active) return;
         hydrateSession(session);
-        await backendAdapter.initialize(lastGeneratedSource);
+        controller = await setupPreview(
+          backendAdapter,
+          lastGeneratedSource,
+          (next) => (state = next)
+        );
         if (!active) return;
-        controller = new PreviewController(backendAdapter, (next) => (state = next));
-        if (lastGeneratedSource) await controller.compile(lastGeneratedSource);
         controllerReady = true;
       } catch (error) {
         if (!active) return;
@@ -402,7 +340,7 @@
     })();
     return () => {
       active = false;
-      if (autosaveTimer) clearTimeout(autosaveTimer);
+      sessionController.dispose();
       controller?.dispose();
       void backendAdapter?.cancel();
     };

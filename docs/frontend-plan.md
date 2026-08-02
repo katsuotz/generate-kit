@@ -21,6 +21,8 @@ The app is a SvelteKit workspace with a backend-backed document and compile flow
 - Preview controller cancellation and monotonically increasing request IDs so stale results cannot replace newer state; the last successful preview remains available when a later request fails.
 - Structured diagnostics and live status announcements.
 - Unit/component tests and a Playwright accessibility/workspace smoke-test foundation.
+- Domain-specific API modules backed by one shared HTTP client and session context. Authentication, CV sessions, documents, and compilation no longer share a monolithic client implementation.
+- Workspace persistence and account orchestration live under `frontend/src/lib/workspace/`; the Svelte component composes the session controller, account service, download helpers, and preview adapter around UI state.
 
 The adapter seam keeps transport and compiler details out of the Svelte components. Real TeX semantics, package support, PDF loading, and network persistence are provided by the backend integration.
 
@@ -36,6 +38,8 @@ The adapter seam keeps transport and compiler details out of the Svelte componen
 - Keep route-level SvelteKit entry points thin and organize workspace behavior under `frontend/src/lib/`.
 - Keep editor, preview, toolbar, diagnostics, and responsive navigation as separate feature components.
 - Keep workspace state responsible for source, dirty state, selected pane, split size, request status, last successful result, and diagnostics.
+- Keep `frontend/src/lib/api/index.ts` as the API composition root so each workspace uses one transport/session context and domain APIs expose only their own DTOs and operations.
+- Keep `frontend/src/lib/workspace/sessionController.ts` responsible for bootstrap, debounced and forced saves, optimistic versions, conflict recovery, and disposal; keep account and browser download concerns in their own services.
 - Keep preview orchestration dependent on `PreviewAdapter`, not on HTTP or process-spawning details.
 - Keep browser tests deterministic with the test-only backend HTTP fixture while application code always uses `BackendPreviewAdapter` and `PUBLIC_API_BASE_URL`.
 - Treat backend-generated HTML or artifact content as untrusted at the rendering boundary; define sanitization and artifact-loading rules before integration.

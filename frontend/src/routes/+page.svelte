@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Workspace from '$lib/components/Workspace.svelte';
+  import Workspace from '$lib/workspace/Workspace.svelte';
 </script>
 
 <svelte:head>

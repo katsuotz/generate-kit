@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BackendPreviewAdapter } from './backendPreviewAdapter';
-import type { BackendClient } from '$lib/api/backendClient';
 
 describe('BackendPreviewAdapter', () => {
   it('saves, polls, and loads the completed PDF artifact', async () => {
-    const client = {
+    const documents = {
       loadDocument: vi.fn().mockResolvedValue({
         id: 'document-1',
         project_id: 'project-1',
@@ -20,7 +19,9 @@ describe('BackendPreviewAdapter', () => {
         revision_id: 'revision-2',
         revision_number: 2,
         source: 'updated source'
-      }),
+      })
+    };
+    const compilation = {
       createCompileJob: vi.fn().mockResolvedValue({
         id: 'job-1',
         revision_id: 'revision-2',
@@ -37,9 +38,10 @@ describe('BackendPreviewAdapter', () => {
         diagnostics: [],
         artifact: { id: 'artifact-1', media_type: 'application/pdf', bytes: 4, page_count: 1 }
       }),
-      getArtifact: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70]).buffer)
-    } as unknown as BackendClient;
-    const adapter = new BackendPreviewAdapter(client);
+      getArtifact: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70]).buffer),
+      cancelCompileJob: vi.fn().mockResolvedValue(undefined)
+    };
+    const adapter = new BackendPreviewAdapter(documents, compilation);
     await adapter.initialize('source');
 
     const result = await adapter.render('updated source');
@@ -50,14 +52,22 @@ describe('BackendPreviewAdapter', () => {
       artifactId: 'artifact-1',
       pageCount: 1
     });
-    expect(client.updateDocument).toHaveBeenCalledWith('document-1', 'updated source', undefined);
-    expect(client.createCompileJob).toHaveBeenCalledWith('document-1', 'revision-2', undefined);
+    expect(documents.updateDocument).toHaveBeenCalledWith(
+      'document-1',
+      'updated source',
+      undefined
+    );
+    expect(compilation.createCompileJob).toHaveBeenCalledWith(
+      'document-1',
+      'revision-2',
+      undefined
+    );
   });
 
   it('does not let an aborted stale render cancel the newer compile job', async () => {
     let resolveArtifact!: (data: ArrayBuffer) => void;
     const artifact = new Promise<ArrayBuffer>((resolve) => (resolveArtifact = resolve));
-    const client = {
+    const documents = {
       loadDocument: vi.fn().mockResolvedValue({
         id: 'document-1',
         project_id: 'project-1',
@@ -75,7 +85,9 @@ describe('BackendPreviewAdapter', () => {
           revision_number: source === 'old' ? 2 : 3,
           source
         })
-      ),
+      )
+    };
+    const compilation = {
       createCompileJob: vi.fn().mockImplementation((_id, revisionId) =>
         Promise.resolve({
           id: revisionId === 'revision-old' ? 'job-old' : 'job-new',
@@ -92,22 +104,22 @@ describe('BackendPreviewAdapter', () => {
       getCompileJob: vi.fn(),
       getArtifact: vi.fn().mockReturnValue(artifact),
       cancelCompileJob: vi.fn().mockResolvedValue(undefined)
-    } as unknown as BackendClient;
-    const adapter = new BackendPreviewAdapter(client);
+    };
+    const adapter = new BackendPreviewAdapter(documents, compilation);
     await adapter.initialize('initial');
     const oldAbort = new AbortController();
 
     const oldRender = adapter.render('old', oldAbort.signal);
-    await vi.waitFor(() => expect(client.createCompileJob).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(compilation.createCompileJob).toHaveBeenCalledTimes(1));
     const newRender = adapter.render('new');
     await vi.waitFor(() =>
-      expect(client.getArtifact).toHaveBeenCalledWith('artifact-new', undefined)
+      expect(compilation.getArtifact).toHaveBeenCalledWith('artifact-new', undefined)
     );
     oldAbort.abort();
     await expect(oldRender).rejects.toMatchObject({ name: 'AbortError' });
 
-    expect(client.cancelCompileJob).toHaveBeenCalledWith('job-old');
-    expect(client.cancelCompileJob).not.toHaveBeenCalledWith('job-new');
+    expect(compilation.cancelCompileJob).toHaveBeenCalledWith('job-old');
+    expect(compilation.cancelCompileJob).not.toHaveBeenCalledWith('job-new');
     resolveArtifact(new Uint8Array([37, 80, 68, 70]).buffer);
     await expect(newRender).resolves.toMatchObject({ artifactId: 'artifact-new' });
   });

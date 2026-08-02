@@ -1,9 +1,7 @@
-import {
-  BackendClient,
-  type CompileJobResponse,
-  type DiagnosticResponse,
-  type DocumentResponse
-} from '$lib/api/backendClient';
+import type { CompilationApi } from '$lib/api/compilation/compilationApi';
+import type { CompileJobResponse, DiagnosticResponse } from '$lib/api/compilation/types';
+import type { DocumentApi } from '$lib/api/documents/documentsApi';
+import type { DocumentResponse } from '$lib/api/documents/types';
 import type { PreviewAdapter, PreviewDiagnostic, PreviewResult } from './types';
 
 const POLL_INTERVAL_MS = 500;
@@ -14,28 +12,31 @@ export class BackendPreviewAdapter implements PreviewAdapter {
   private activeJobId: string | null = null;
   private renderId = 0;
 
-  constructor(private readonly client: BackendClient) {}
+  constructor(
+    private readonly documents: DocumentApi,
+    private readonly compilation: CompilationApi
+  ) {}
 
   get documentSource() {
     return this.document?.source ?? null;
   }
 
   async initialize(initialSource: string) {
-    this.document = await this.client.loadDocument(initialSource);
+    this.document = await this.documents.loadDocument(initialSource);
     return this.document;
   }
 
   async render(source: string, signal?: AbortSignal): Promise<PreviewResult> {
     if (!source.trim()) return { kind: 'empty' };
     const renderId = ++this.renderId;
-    this.document ??= await this.client.loadDocument(source);
+    this.document ??= await this.documents.loadDocument(source);
 
     const document =
       this.document.source === source
         ? this.document
-        : await this.client.updateDocument(this.document.id, source, signal);
+        : await this.documents.updateDocument(this.document.id, source, signal);
     this.document = document;
-    const job = await this.client.createCompileJob(document.id, document.revision_id, signal);
+    const job = await this.compilation.createCompileJob(document.id, document.revision_id, signal);
     if (renderId !== this.renderId || signal?.aborted) {
       await this.cancelJob(job.id);
       throw new DOMException('Preview cancelled', 'AbortError');
@@ -51,7 +52,7 @@ export class BackendPreviewAdapter implements PreviewAdapter {
         };
       }
 
-      const data = await this.client.getArtifact(completed.artifact.id, signal);
+      const data = await this.compilation.getArtifact(completed.artifact.id, signal);
       return {
         kind: 'success',
         representation: 'pdf',
@@ -87,14 +88,14 @@ export class BackendPreviewAdapter implements PreviewAdapter {
         await this.cancelJob(job.id);
         throw new Error('Compilation timed out while waiting for the backend worker.');
       }
-      job = await this.client.getCompileJob(job.id, signal);
+      job = await this.compilation.getCompileJob(job.id, signal);
     }
 
     return job;
   }
 
   private async cancelJob(jobId: string) {
-    await this.client.cancelCompileJob(jobId).catch(() => undefined);
+    await this.compilation.cancelCompileJob(jobId).catch(() => undefined);
     if (this.activeJobId === jobId) this.activeJobId = null;
   }
 }
