@@ -113,6 +113,14 @@ test('opens the proof workspace with actionable diagnostics on a first-run failu
     'Fixture compiler rejected this source.'
   );
   await expect(page.getByText('Proof needs attention')).toBeVisible();
+  await page.getByRole('button', { name: /Fixture compiler rejected this source/ }).click();
+  await expect(page.getByRole('heading', { name: 'LaTeX source' })).toBeVisible();
+  await expect(page.locator('.source-code .cm-editor')).toBeVisible();
+  await expect(page.locator('.source-code .cm-content')).toHaveAttribute(
+    'contenteditable',
+    'false'
+  );
+  await expect(page.locator('.source-code .cm-editor')).toHaveCSS('color', 'rgb(213, 226, 238)');
 });
 
 test('moves between form sections and exposes exact source actions', async ({ page }) => {

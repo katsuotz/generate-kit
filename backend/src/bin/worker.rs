@@ -28,10 +28,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ))));
     let compilation =
         CompilationService::new(Arc::new(PgCompilationRepository::new(pool)), documents);
-    let recovered = compilation.recover_stale_jobs().await?;
-    if recovered > 0 {
-        tracing::warn!(count = recovered, "requeued stale compile jobs");
-    }
     worker::run(compilation, config).await?;
     Ok(())
 }

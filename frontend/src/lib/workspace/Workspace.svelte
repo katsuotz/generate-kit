@@ -87,6 +87,8 @@
   let controller: PreviewController | null = null;
   let controllerReady = false;
   let rendering = false;
+  let diagnosticLine: number | null = null;
+  let diagnosticColumn: number | null = null;
   let sessionController: SessionController;
   let accountService: AccountService;
   $: currentFingerprint = fingerprintCv(data);
@@ -266,6 +268,11 @@
   function toggleAdvanced() {
     advanced = !advanced;
     if (advanced) mobilePane = 'preview';
+  }
+  function selectDiagnostic(line: number, column: number) {
+    diagnosticLine = line;
+    diagnosticColumn = column;
+    advanced = true;
   }
   function go(direction: -1 | 1) {
     activeSection =
@@ -453,11 +460,13 @@
         {advanced}
         {dirty}
         {lastGeneratedSource}
+        {diagnosticLine}
+        {diagnosticColumn}
         hidden={mobilePane !== 'preview'}
         onCopySource={copySource}
         onDownloadText={downloadText}
         onDownloadPdf={downloadPdf}
-        onDiagnosticSelect={() => (advanced = true)} />
+        onDiagnosticSelect={selectDiagnostic} />
     {/if}
   </div>
 

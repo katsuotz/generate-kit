@@ -35,7 +35,10 @@ describe('SessionController', () => {
       bootstrap: vi.fn(),
       get: vi.fn().mockResolvedValue(latest),
       create: vi.fn(),
-      save: vi.fn().mockRejectedValue(new BackendApiError('Conflict', 409, 'conflict'))
+      save: vi
+        .fn()
+        .mockRejectedValueOnce(new BackendApiError('Conflict', 409, 'conflict'))
+        .mockResolvedValueOnce({ ...session, version: 5 })
     } as unknown as CvSessionApi;
     const onNotice = vi.fn();
     const controller = new SessionController(api, {
@@ -44,11 +47,42 @@ describe('SessionController', () => {
       onNotice
     });
     controller.hydrate(session);
+    applySession.mockClear();
+
+    await expect(controller.flush(true)).resolves.toBe(true);
+    expect(api.get).toHaveBeenCalledOnce();
+    expect(applySession).not.toHaveBeenCalled();
+    expect(api.save).toHaveBeenNthCalledWith(2, draft, 4);
+    expect(controller.currentVersion).toBe(5);
+    expect(onNotice).toHaveBeenCalledOnce();
+  });
+
+  it('does not loop or replace local edits when the conflict retry fails', async () => {
+    const api = {
+      bootstrap: vi.fn(),
+      get: vi.fn().mockResolvedValue({ ...session, version: 4 }),
+      create: vi.fn(),
+      save: vi
+        .fn()
+        .mockRejectedValueOnce(new BackendApiError('Conflict', 409, 'conflict'))
+        .mockRejectedValueOnce(new BackendApiError('Conflict', 409, 'conflict'))
+    } as unknown as CvSessionApi;
+    const applySession = vi.fn();
+    const onNotice = vi.fn();
+    const controller = new SessionController(api, {
+      getDraft: () => draft,
+      applySession,
+      onNotice
+    });
+    controller.hydrate(session);
+    applySession.mockClear();
 
     await expect(controller.flush(true)).resolves.toBe(false);
     expect(api.get).toHaveBeenCalledOnce();
-    expect(applySession).toHaveBeenCalledWith(latest);
-    expect(controller.currentVersion).toBe(4);
-    expect(onNotice).toHaveBeenCalledOnce();
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(applySession).not.toHaveBeenCalled();
+    expect(onNotice).toHaveBeenCalledWith(
+      'Could not save after a newer version was found; your edits remain available in this tab.'
+    );
   });
 });

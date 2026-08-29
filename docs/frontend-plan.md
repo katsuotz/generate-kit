@@ -59,8 +59,8 @@ Template integration adds `GET /api/v1/cv/templates`, `GET /api/v1/cv/templates/
 
 ## Remaining frontend work
 
-- Improve server draft conflict recovery and multi-tab coordination if richer collaboration is required.
-- Improve diagnostic navigation and map backend file/line/column locations to richer CodeMirror decorations.
+- Add field-level server draft conflict merging and multi-tab coordination if richer collaboration is required; the current local-preserving recovery retries once against the latest optimistic version.
+- Add file-aware CodeMirror decorations and previous/next diagnostic movement; direct diagnostic selection already opens the reported source line and column.
 - Add document/project navigation only if the product requires multiple documents.
 - Expand responsive, keyboard, and screen-reader verification, including browser-level accessibility checks.
 - Add CI that runs the frontend checks from the monorepo root.

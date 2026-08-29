@@ -3,7 +3,7 @@
   import { Button } from './base';
 
   export let diagnostics: PreviewDiagnostic[];
-  export let onSelect: (line: number) => void;
+  export let onSelect: (line: number, column: number) => void;
 </script>
 
 {#if diagnostics.length > 0}
@@ -23,7 +23,7 @@
           <Button
             variant="secondary"
             className="diagnostic-button"
-            onClick={() => onSelect(diagnostic.line)}>
+            onClick={() => onSelect(diagnostic.line, diagnostic.column)}>
             <span class="diagnostic-location">Ln {diagnostic.line}:{diagnostic.column}</span>
             <span class="diagnostic-message">{diagnostic.message}</span>
             <code>{diagnostic.code}</code>

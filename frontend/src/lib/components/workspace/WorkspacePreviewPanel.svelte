@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '../base';
+  import CodeEditor from '../CodeEditor.svelte';
   import PreviewPane from '../PreviewPane.svelte';
   import type { PreviewState } from '$lib/workspace/previewController';
 
@@ -7,11 +8,13 @@
   export let advanced: boolean;
   export let dirty: boolean;
   export let lastGeneratedSource: string;
+  export let diagnosticLine: number | null = null;
+  export let diagnosticColumn: number | null = null;
   export let hidden = false;
   export let onCopySource: () => void;
   export let onDownloadText: () => void;
   export let onDownloadPdf: () => void;
-  export let onDiagnosticSelect: () => void;
+  export let onDiagnosticSelect: (line: number, column: number) => void;
 </script>
 
 <section class="preview-panel" class:mobile-hidden={hidden} aria-label="Rendered preview">
@@ -39,8 +42,20 @@
           </Button>
         </div>
       </div>
-      <pre class="source-code">{lastGeneratedSource ||
-          'Generate your CV to inspect its exact LaTeX source.'}</pre>
+      {#if lastGeneratedSource}
+        <div class="source-code">
+          <CodeEditor
+            value={lastGeneratedSource}
+            onChange={() => undefined}
+            onCompile={() => undefined}
+            {diagnosticLine}
+            {diagnosticColumn}
+            colorScheme="dark"
+            readOnly />
+        </div>
+      {:else}
+        <pre class="source-code">Generate your CV to inspect its exact LaTeX source.</pre>
+      {/if}
     </div>
   {:else}
     <div class="preview-header">

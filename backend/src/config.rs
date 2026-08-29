@@ -12,7 +12,16 @@ pub enum ConfigError {
         name: &'static str,
         source: Box<dyn std::error::Error + Send + Sync>,
     },
+    #[error("invalid environment variable {name}: must be between {min} and {max}")]
+    OutOfRange {
+        name: &'static str,
+        min: u64,
+        max: u64,
+    },
 }
+
+const MIN_COMPILE_TIMEOUT_SECONDS: u64 = 1;
+const MAX_COMPILE_TIMEOUT_SECONDS: u64 = 90;
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -51,12 +60,11 @@ impl Config {
         let compiler_path = env::var("LATEX_COMPILER_PATH")
             .unwrap_or_else(|_| "xelatex".into())
             .into();
-        let compile_timeout = Duration::from_secs(parse(
-            "COMPILE_TIMEOUT_SECONDS",
+        let compile_timeout = parse_compile_timeout(
             env::var("COMPILE_TIMEOUT_SECONDS")
                 .ok()
                 .unwrap_or_else(|| "30".into()),
-        )?);
+        )?;
         let session_ttl = Duration::from_secs(parse(
             "SESSION_TTL_SECONDS",
             env::var("SESSION_TTL_SECONDS")
@@ -96,4 +104,28 @@ where
         name,
         source: Box::new(source),
     })
+}
+
+fn parse_compile_timeout(value: String) -> Result<Duration, ConfigError> {
+    let seconds = parse("COMPILE_TIMEOUT_SECONDS", value)?;
+    if !(MIN_COMPILE_TIMEOUT_SECONDS..=MAX_COMPILE_TIMEOUT_SECONDS).contains(&seconds) {
+        return Err(ConfigError::OutOfRange {
+            name: "COMPILE_TIMEOUT_SECONDS",
+            min: MIN_COMPILE_TIMEOUT_SECONDS,
+            max: MAX_COMPILE_TIMEOUT_SECONDS,
+        });
+    }
+    Ok(Duration::from_secs(seconds))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_compile_timeout;
+
+    #[test]
+    fn compile_timeout_preserves_stale_recovery_grace() {
+        assert_eq!(parse_compile_timeout("90".into()).unwrap().as_secs(), 90);
+        assert!(parse_compile_timeout("0".into()).is_err());
+        assert!(parse_compile_timeout("91".into()).is_err());
+    }
 }

@@ -187,7 +187,18 @@ impl CompilationRepository for PgCompilationRepository {
             None => "succeeded",
         };
         sqlx::query(
-            "UPDATE compile_jobs SET status = $2::compile_job_status, diagnostics = $3, error_code = $4, finished_at = now() WHERE id = $1",
+            "UPDATE compile_jobs
+             SET status = CASE
+                     WHEN cancellation_requested_at IS NOT NULL THEN 'cancelled'::compile_job_status
+                     ELSE $2::compile_job_status
+                 END,
+                 diagnostics = $3,
+                 error_code = CASE
+                     WHEN cancellation_requested_at IS NOT NULL THEN 'CANCELLED'
+                     ELSE $4
+                 END,
+                 finished_at = now()
+             WHERE id = $1",
         )
         .bind(job_id)
         .bind(status)
@@ -229,7 +240,22 @@ impl CompilationRepository for PgCompilationRepository {
 
     async fn recover_stale_jobs(&self) -> Result<u64, AppError> {
         Ok(sqlx::query(
-            "UPDATE compile_jobs SET status = 'queued', started_at = NULL WHERE status = 'running' AND started_at < now() - interval '2 minutes'",
+            "UPDATE compile_jobs
+             SET status = CASE
+                     WHEN cancellation_requested_at IS NOT NULL THEN 'cancelled'::compile_job_status
+                     ELSE 'queued'::compile_job_status
+                 END,
+                 started_at = NULL,
+                 finished_at = CASE
+                     WHEN cancellation_requested_at IS NOT NULL THEN now()
+                     ELSE NULL
+                 END,
+                 error_code = CASE
+                     WHEN cancellation_requested_at IS NOT NULL THEN 'CANCELLED'
+                     ELSE NULL
+                 END
+             WHERE status = 'running'
+               AND started_at < now() - interval '2 minutes'",
         )
         .execute(&self.pool)
         .await?

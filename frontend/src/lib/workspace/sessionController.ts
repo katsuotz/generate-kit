@@ -100,14 +100,21 @@ export class SessionController {
       if (error instanceof BackendApiError && error.status === 409) {
         try {
           const latest = await this.api.get();
-          this.hydrate(latest);
+          // Local edits win deterministically: use only the newer version as the
+          // optimistic concurrency token, then retry this exact draft once.
+          this.version = latest.version;
+          const saved = await this.api.save(draft, latest.version);
+          this.version = saved.version;
           this.options.onStatus?.('saved');
           this.options.onNotice?.(
-            'This CV changed in another session. The latest saved version is loaded.'
+            'A newer CV version was found. Your local edits were saved over it.'
           );
+          return true;
         } catch {
           this.options.onStatus?.('error');
-          this.options.onNotice?.('Autosave found a newer version, but could not recover it yet.');
+          this.options.onNotice?.(
+            'Could not save after a newer version was found; your edits remain available in this tab.'
+          );
         }
       } else {
         this.options.onStatus?.('error');

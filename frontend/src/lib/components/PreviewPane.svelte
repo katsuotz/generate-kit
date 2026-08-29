@@ -4,7 +4,7 @@
   import type { PreviewState } from '$lib/workspace/previewController';
 
   export let state: PreviewState;
-  export let onDiagnosticSelect: (line: number) => void;
+  export let onDiagnosticSelect: (line: number, column: number) => void;
 </script>
 
 <div class="preview-root" aria-label="Rendered document preview">

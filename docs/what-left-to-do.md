@@ -7,8 +7,8 @@ This list reflects the remaining work in the current repository.
 ## Product and workflow
 
 - [ ] Decide whether to add browser-local or offline draft recovery. Current drafts autosave to the backend, and editing continues in the current tab when remote autosave fails.
-- [ ] Improve optimistic-conflict recovery and add multi-tab coordination if users need concurrent editing. The current flow loads the latest saved version but does not merge changes.
-- [ ] Add richer compiler-diagnostic navigation, including file/line/column decorations and direct movement between diagnostics.
+- [ ] Add field-level optimistic-conflict merging and multi-tab coordination if users need concurrent editing. The current flow preserves the local draft and retries it once against the latest saved version, but it does not merge concurrent field changes.
+- [ ] Add richer compiler-diagnostic navigation, including file-aware decorations and direct previous/next movement. Selecting a diagnostic now opens the generated source at its reported line and column.
 - [ ] Add document and project navigation only if the product expands beyond the current single-CV workflow.
 - [ ] Define whether collaboration, sharing, or a broader document model belongs on the roadmap.
 

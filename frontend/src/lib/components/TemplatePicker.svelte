@@ -11,22 +11,58 @@
 
   type PreviewState = { status: 'loading' | 'ready' | 'error'; data?: ArrayBuffer };
   let previews: Record<string, PreviewState> = {};
+  let mounted = false;
+  const requested = new Set<string>();
+  const requests = new Map<string, AbortController>();
+
+  $: if (mounted) syncPreviews(templates);
+
+  function syncPreviews(nextTemplates: CvTemplateSummary[]) {
+    const ids = new Set(nextTemplates.map((template) => template.id));
+    for (const [templateId, controller] of requests) {
+      if (!ids.has(templateId)) {
+        controller.abort();
+        requests.delete(templateId);
+        requested.delete(templateId);
+      }
+    }
+
+    for (const template of nextTemplates) {
+      if (!requested.has(template.id)) requestPreview(template.id);
+    }
+  }
+
+  function requestPreview(templateId: string) {
+    requested.add(templateId);
+    const controller = new AbortController();
+    requests.set(templateId, controller);
+    previews = { ...previews, [templateId]: { status: 'loading' } };
+    void loadPreview(templateId, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted || requests.get(templateId) !== controller) return;
+        requests.delete(templateId);
+        previews = { ...previews, [templateId]: { status: 'ready', data } };
+      })
+      .catch(() => {
+        if (controller.signal.aborted || requests.get(templateId) !== controller) return;
+        requests.delete(templateId);
+        previews = { ...previews, [templateId]: { status: 'error' } };
+      });
+  }
+
+  function retryPreview(templateId: string) {
+    requested.delete(templateId);
+    requestPreview(templateId);
+  }
 
   onMount(() => {
-    const controller = new AbortController();
-    for (const template of templates) {
-      previews = { ...previews, [template.id]: { status: 'loading' } };
-      void loadPreview(template.id, controller.signal)
-        .then((data) => {
-          if (controller.signal.aborted) return;
-          previews = { ...previews, [template.id]: { status: 'ready', data } };
-        })
-        .catch(() => {
-          if (!controller.signal.aborted)
-            previews = { ...previews, [template.id]: { status: 'error' } };
-        });
-    }
-    return () => controller.abort();
+    mounted = true;
+    syncPreviews(templates);
+    return () => {
+      mounted = false;
+      for (const controller of requests.values()) controller.abort();
+      requests.clear();
+    };
   });
 
   function handlePreviewError(templateId: string) {
@@ -42,32 +78,43 @@
   <div class="template-grid" role="radiogroup" aria-label="CV templates">
     {#each templates as template (template.id)}
       {@const preview = previews[template.id]}
-      <RadioCard
-        className="template-card"
-        label={template.name}
-        description={template.description}
-        name="cv-template"
-        value={template.id}
-        checked={selectedId === template.id}
-        aria-label={`Use ${template.name} template`}
-        onChange={() => onSelect(template.id)}>
-        <span class="template-preview">
-          {#if preview?.status === 'ready' && preview.data}
-            <PdfPreview
-              data={preview.data.slice(0)}
-              firstPageOnly
-              compact
-              onError={() => handlePreviewError(template.id)} />
-          {:else if preview?.status === 'loading'}
-            <span class="template-loading">Loading preview…</span>
-          {:else}
-            <span class="template-fallback">
-              <span class="fallback-mark">{template.name.slice(0, 1).toUpperCase()}</span>
-              <span>Preview unavailable</span>
-            </span>
-          {/if}
-        </span>
-      </RadioCard>
+      <div class="template-option">
+        <RadioCard
+          className="template-card"
+          label={template.name}
+          description={template.description}
+          name="cv-template"
+          value={template.id}
+          checked={selectedId === template.id}
+          aria-label={`Use ${template.name} template`}
+          onChange={() => onSelect(template.id)}>
+          <span class="template-preview">
+            {#if preview?.status === 'ready' && preview.data}
+              <PdfPreview
+                data={preview.data.slice(0)}
+                firstPageOnly
+                compact
+                onError={() => handlePreviewError(template.id)} />
+            {:else if preview?.status === 'loading'}
+              <span class="template-loading">Loading preview…</span>
+            {:else}
+              <span class="template-fallback">
+                <span class="fallback-mark">{template.name.slice(0, 1).toUpperCase()}</span>
+                <span>Preview unavailable</span>
+              </span>
+            {/if}
+          </span>
+        </RadioCard>
+        {#if preview?.status === 'error'}
+          <button
+            class="template-retry"
+            type="button"
+            aria-label={`Retry ${template.name} preview`}
+            on:click={() => retryPreview(template.id)}>
+            Retry preview
+          </button>
+        {/if}
+      </div>
     {/each}
   </div>
 </fieldset>
@@ -140,6 +187,30 @@
     overflow: hidden;
     border: 1px solid var(--rule);
     background: #e5eaf0;
+  }
+
+  .template-option {
+    min-width: 0;
+  }
+
+  .template-retry {
+    display: block;
+    margin: 7px auto 0;
+    border: 0;
+    background: transparent;
+    color: var(--blue-dark);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .template-retry:hover {
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .template-preview :global(.pdf-pages) {

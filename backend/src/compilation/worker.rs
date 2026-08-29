@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tokio::time::{Duration, sleep};
+use tokio::time::{Duration, Instant, sleep};
 use tracing::info;
 
 use super::{
@@ -8,6 +8,8 @@ use super::{
     compiler::{Compiler, DisabledCompiler, XeLatexCompiler},
 };
 use crate::config::Config;
+
+const STALE_RECOVERY_INTERVAL: Duration = Duration::from_secs(30);
 
 pub async fn run(
     service: CompilationService,
@@ -19,8 +21,16 @@ pub async fn run(
         Arc::new(DisabledCompiler)
     };
     info!(enabled = config.compiler_enabled, "compile worker started");
+    let mut next_stale_recovery = Instant::now();
 
     loop {
+        if Instant::now() >= next_stale_recovery {
+            let recovered = service.recover_stale_jobs().await?;
+            if recovered > 0 {
+                tracing::warn!(count = recovered, "recovered stale compile jobs");
+            }
+            next_stale_recovery = Instant::now() + STALE_RECOVERY_INTERVAL;
+        }
         if let Some((job_id, revision_id, _profile)) = service.claim_job().await? {
             if service.is_cancelled(job_id).await? {
                 service.finish_job(job_id, &[], Some("CANCELLED")).await?;

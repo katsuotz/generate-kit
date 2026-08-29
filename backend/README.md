@@ -34,6 +34,8 @@ cargo run --bin latex-renderer-worker
 
 Host-side worker runs keep compilation disabled unless `LATEX_COMPILER_ENABLED=true` and `LATEX_COMPILER_PATH` point to an installed XeLaTeX environment. The Compose worker uses the dedicated `worker` image target, which contains XeLaTeX, LaTeX extras, and CV-oriented fonts and enables compilation. The API image does not contain TeX. Normal API and database tests do not require TeX.
 
+`COMPILE_TIMEOUT_SECONDS` must be between 1 and 90 seconds. This keeps the compiler timeout safely below the worker's two-minute stale-job recovery threshold.
+
 ## API
 
 - `GET /health/live`
