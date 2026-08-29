@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { Button } from '../base';
   import CodeEditor from '../CodeEditor.svelte';
   import PreviewPane from '../PreviewPane.svelte';
@@ -14,7 +15,24 @@
   export let onCopySource: () => void;
   export let onDownloadText: () => void;
   export let onDownloadPdf: () => void;
+  export let onToggleAdvanced: () => void;
   export let onDiagnosticSelect: (line: number, column: number) => void;
+
+  let fullPage = false;
+  let fullPageDialog: HTMLDialogElement;
+
+  function openFullPage() {
+    fullPage = true;
+    void tick().then(() => {
+      if (!fullPageDialog?.open) fullPageDialog?.showModal();
+      fullPageDialog?.focus();
+    });
+  }
+
+  function closeFullPage() {
+    fullPageDialog?.close();
+    fullPage = false;
+  }
 </script>
 
 <section class="preview-panel" class:mobile-hidden={hidden} aria-label="Rendered preview">
@@ -22,10 +40,12 @@
     <div class="source-panel">
       <div class="source-header">
         <div>
-          <p class="panel-kicker">Generated source</p>
           <h2>LaTeX source</h2>
         </div>
         <div class="source-actions">
+          <Button variant="secondary" className="mobile-source-toggle" onClick={onToggleAdvanced}>
+            Preview
+          </Button>
           <Button
             variant="secondary"
             className="source-action"
@@ -60,12 +80,21 @@
   {:else}
     <div class="preview-header">
       <div>
-        <p class="panel-kicker">Rendered proof</p>
         <h2>Preview</h2>
       </div>
       <div class="preview-actions">
+        <Button
+          variant="secondary"
+          className="mobile-source-toggle"
+          onClick={onToggleAdvanced}
+          disabled={!lastGeneratedSource}>
+          Source
+        </Button>
         {#if state.lastSuccess && (dirty || state.status === 'failure')}
           <span class="proof-badge is-stale">Last successful proof</span>
+        {/if}
+        {#if state.lastSuccess}
+          <Button variant="secondary" onClick={openFullPage}>Full page</Button>
         {/if}
         {#if state.lastSuccess?.representation === 'pdf'}
           <Button variant="text" onClick={onDownloadPdf}>Download PDF</Button>
@@ -77,6 +106,24 @@
     </div>
   {/if}
 </section>
+
+{#if fullPage}
+  <dialog
+    class="preview-modal"
+    aria-labelledby="full-page-preview-title"
+    aria-modal="true"
+    bind:this={fullPageDialog}
+    on:cancel|preventDefault={closeFullPage}
+    on:close={() => (fullPage = false)}>
+    <div class="preview-modal-header">
+      <h2 id="full-page-preview-title">Full-page preview</h2>
+      <Button variant="secondary" onClick={closeFullPage}>Close</Button>
+    </div>
+    <div class="preview-modal-body">
+      <PreviewPane {state} {onDiagnosticSelect} />
+    </div>
+  </dialog>
+{/if}
 
 <style>
   .preview-panel {
@@ -98,9 +145,7 @@
   }
 
   .preview-header h2,
-  .source-header h2,
-  .preview-header p,
-  .source-header p {
+  .source-header h2 {
     margin: 0;
   }
 
@@ -118,13 +163,17 @@
     gap: 10px;
   }
 
+  :global(.mobile-source-toggle) {
+    display: none;
+  }
+
   .proof-badge {
     border: 1px solid var(--rule-strong);
     border-radius: 5px;
     padding: 6px 8px;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -141,6 +190,45 @@
     flex: 1;
   }
 
+  .preview-modal {
+    display: flex;
+    width: min(1180px, calc(100vw - 32px));
+    height: min(92vh, 960px);
+    max-width: none;
+    margin: auto;
+    flex-direction: column;
+    border: 1px solid var(--rule-strong);
+    padding: 0;
+    background: var(--surface);
+    box-shadow: 0 24px 80px rgb(23 33 43 / 24%);
+    color: var(--ink);
+  }
+
+  .preview-modal::backdrop {
+    background: rgb(23 33 43 / 54%);
+  }
+
+  .preview-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px;
+    background: var(--surface-subtle);
+  }
+
+  .preview-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.03em;
+  }
+
+  .preview-modal-body {
+    min-height: 0;
+    flex: 1;
+  }
+
   .source-panel {
     display: flex;
     min-height: 0;
@@ -153,10 +241,6 @@
   .source-panel .source-header {
     border-color: #354554;
     background: #202d39;
-  }
-
-  .source-panel .panel-kicker {
-    color: #9bbbe7;
   }
 
   .source-panel .source-header h2 {
@@ -193,6 +277,10 @@
   }
 
   @media (max-width: 560px) {
+    :global(.mobile-source-toggle) {
+      display: inline-flex;
+    }
+
     .preview-header,
     .source-header {
       align-items: flex-start;
@@ -204,6 +292,16 @@
     .source-actions {
       width: 100%;
       justify-content: space-between;
+    }
+
+    .preview-modal {
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+    }
+
+    .preview-modal-header {
+      padding: 13px 16px;
     }
   }
 </style>

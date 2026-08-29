@@ -84,14 +84,6 @@
   {/each}
 </svelte:head>
 
-<!--
-  THESIS: Marginalia is the CV builder that keeps the proof in view, refusing the usual promise-first landing page.
-  OWN-WORLD: A cool-gray proofing desk, white paper surfaces, graphite ink, and one blue thread marking verified state.
-  STORY: Visitors see facts become source become a rendered document, then open the builder to make their own.
-  FIRST VIEWPORT: Branding and a compact navigation sit above a split hero: direct copy on the left, the annotated proof desk on the right.
-  FORM: Grounded technical proof desk, structure 5, staging the mechanism as a connected three-stage work surface; seed 00ebc3ea.
-  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->
 <main class="landing">
   <div class="proof-thread" aria-hidden="true"></div>
   <LandingHeader />
@@ -148,8 +140,6 @@
   :global(.landing .hero-actions),
   :global(.landing .template-card-copy),
   :global(.landing .stage-heading),
-  :global(.landing .stage-status),
-  :global(.landing .desk-label),
   :global(.landing .source-meta),
   :global(.landing .site-footer) {
     display: flex;
@@ -190,7 +180,7 @@
     border-radius: 7px;
     padding: 0 16px;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -230,33 +220,16 @@
     padding: 0 21px;
   }
 
-  :global(.landing .eyebrow),
-  :global(.landing .desk-label),
   :global(.landing .stage-index),
-  :global(.landing .template-index),
   :global(.landing .workflow-marker),
   :global(.landing .source-meta) {
     color: var(--quiet-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     line-height: 1.3;
     text-transform: uppercase;
-  }
-
-  :global(.landing .eyebrow) {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin: 0 0 22px;
-  }
-
-  :global(.landing .eyebrow-dot) {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--blue);
   }
 
   :global(.landing h1),

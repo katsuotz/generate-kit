@@ -10,7 +10,6 @@
 </script>
 
 <nav class="section-rail" aria-label="CV sections">
-  <p class="rail-label">Your CV</p>
   {#each sections as section, index}
     {@const errorCount = sectionErrors(section)}
     <Button
@@ -33,19 +32,14 @@
     background: var(--surface-subtle);
   }
 
-  .rail-label,
   .section-index {
     color: var(--quiet-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.08em;
     line-height: 1.3;
     text-transform: uppercase;
-  }
-
-  .rail-label {
-    margin: 0 10px 15px;
   }
 
   :global(.section-nav-button) {
@@ -66,6 +60,10 @@
       background-color 180ms ease,
       border-color 180ms ease,
       color 180ms ease;
+  }
+
+  :global(.section-nav-button.text-button) {
+    font-size: 13px;
   }
 
   :global(.section-nav-button:hover) {

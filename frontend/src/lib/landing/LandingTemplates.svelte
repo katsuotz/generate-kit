@@ -10,24 +10,15 @@
 <section id="templates" class="templates section-frame" aria-labelledby="templates-title">
   <div class="section-heading">
     <div>
-      <p class="eyebrow">
-        <span class="eyebrow-dot" aria-hidden="true"></span>
-        Choose your starting point
-      </p>
-      <h2 id="templates-title">
-        Three templates.
-        <br />
-        <span>One honest output.</span>
-      </h2>
+      <h2 id="templates-title">Choose a template.</h2>
     </div>
     <p>
-      Each template is a real, compile-ready layout. Start with the one that fits your story and
-      switch before you generate again.
+      Pick a layout that fits your experience. You can switch templates before generating your CV.
     </p>
   </div>
   <div class="template-grid">
-    {#each templates as template, index}
-      <article class:template-featured={index === 0} class="template-card">
+    {#each templates as template}
+      <article class="template-card">
         <div class="template-image-wrap">
           <img
             src={template.image}
@@ -37,14 +28,12 @@
             loading="eager"
             fetchpriority="high"
             decoding="async" />
-          <span class="template-index">0{index + 1}</span>
         </div>
         <div class="template-card-copy">
           <div>
             <h3>{template.name}</h3>
             <p>{template.description}</p>
           </div>
-          <span class="template-arrow" aria-hidden="true">↗</span>
         </div>
       </article>
     {/each}
@@ -121,13 +110,6 @@
     box-shadow: 0 12px 18px rgb(23 33 43 / 14%);
   }
 
-  .template-index {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    color: var(--blue-dark);
-  }
-
   .template-card-copy {
     justify-content: space-between;
     gap: 16px;
@@ -145,15 +127,8 @@
     max-width: 28ch;
     margin: 0;
     color: var(--muted-ink);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
-  }
-
-  .template-arrow {
-    align-self: flex-start;
-    color: var(--blue);
-    font-size: 24px;
-    line-height: 1;
   }
 
   @media (max-width: 700px) {

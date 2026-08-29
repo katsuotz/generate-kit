@@ -432,7 +432,6 @@
         {data}
         templates={templateCatalog}
         {templateId}
-        loadPreview={backendApi.templates.getPreview.bind(backendApi.templates)}
         onSelectTemplate={selectTemplate}
         {activeSection}
         {presentation}
@@ -466,6 +465,7 @@
         onCopySource={copySource}
         onDownloadText={downloadText}
         onDownloadPdf={downloadPdf}
+        onToggleAdvanced={toggleAdvanced}
         onDiagnosticSelect={selectDiagnostic} />
     {/if}
   </div>
@@ -534,7 +534,6 @@
   }
 
   :global(.brand-lockup h1),
-  :global(.brand-lockup p),
   :global(.form-heading h2),
   :global(.form-heading p),
   :global(.preview-header h2),
@@ -550,29 +549,19 @@
     letter-spacing: -0.02em;
   }
 
-  :global(.brand-lockup p),
-  .panel-kicker,
   .section-kicker,
-  .rail-label,
   .section-index,
   .page-count,
   .proof-status,
-  :global(label > span),
+  :global(.field-label),
   :global(.form-label) {
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.08em;
     line-height: 1.3;
     text-transform: uppercase;
-  }
-
-  :global(.brand-lockup p) {
-    margin-top: 3px;
-    color: var(--quiet-ink);
-    font-size: 9px;
-    letter-spacing: 0.12em;
   }
 
   .header-actions {
@@ -589,7 +578,7 @@
   .account-button {
     min-height: 32px;
     padding: 0 10px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .account-label {
@@ -597,7 +586,7 @@
     overflow: hidden;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -640,7 +629,7 @@
     gap: 14px;
   }
 
-  :global(.account-panel label > span) {
+  :global(.account-panel .field-label) {
     margin-bottom: 6px;
   }
 
@@ -668,7 +657,7 @@
     margin-top: 15px;
     padding: 0;
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.04em;
   }
 
@@ -719,7 +708,7 @@
     border-radius: 7px;
     padding: 0 14px;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -773,7 +762,7 @@
     background: transparent;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -802,7 +791,7 @@
     border-radius: 50%;
     background: var(--danger);
     color: #fff;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .workspace-content {
@@ -831,12 +820,6 @@
     padding: 27px 14px;
     border-right: 1px solid var(--rule);
     background: var(--surface-subtle);
-  }
-
-  .rail-label {
-    margin: 0 10px 15px;
-    color: var(--quiet-ink);
-    font-size: 9px;
   }
 
   .section-nav-button {
@@ -877,7 +860,7 @@
 
   .section-index {
     color: var(--quiet-ink);
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .builder-scroll {
@@ -895,11 +878,10 @@
     margin-bottom: 30px;
   }
 
-  .section-kicker,
-  .panel-kicker {
+  .section-kicker {
     margin-bottom: 10px !important;
     color: var(--blue-dark);
-    font-size: 9px;
+    font-size: 11px;
   }
 
   :global(.form-heading h2) {
@@ -915,47 +897,6 @@
     color: var(--muted-ink);
     font-size: 16px;
     line-height: 1.5;
-  }
-
-  .intake-guide {
-    display: flex;
-    gap: 13px;
-    margin-bottom: 28px;
-    border: 1px solid #c9dafa;
-    border-radius: 8px;
-    padding: 14px 16px;
-    background: var(--blue-soft);
-    color: var(--blue-dark);
-    animation: reveal 220ms ease-out both;
-  }
-
-  .guide-mark {
-    display: grid;
-    width: 22px;
-    height: 22px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    font-family: var(--mono);
-    font-size: 10px;
-  }
-
-  :global(.intake-guide strong),
-  :global(.intake-guide span) {
-    display: block;
-  }
-
-  :global(.intake-guide strong) {
-    font-size: 13px;
-  }
-
-  :global(.intake-guide span) {
-    margin-top: 3px;
-    color: #315a91;
-    font-size: 13px;
-    line-height: 1.45;
   }
 
   .form-alert,
@@ -979,15 +920,15 @@
     color: var(--muted-ink);
   }
 
-  :global(label > span),
+  :global(.field-label),
   :global(.form-label) {
     display: block;
     margin-bottom: 7px;
     color: var(--muted-ink);
-    font-size: 9px;
+    font-size: 11px;
   }
 
-  :global(label > span b) {
+  :global(.field-label b) {
     color: var(--blue);
   }
 
@@ -1032,7 +973,7 @@
     margin-top: 6px;
     color: var(--danger);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
   }
 
@@ -1071,7 +1012,7 @@
     color: var(--blue-dark);
     cursor: pointer;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -1096,7 +1037,7 @@
     color: var(--blue-dark);
     cursor: pointer;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1130,7 +1071,7 @@
     padding: 10px 0;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .section-footer {
@@ -1144,7 +1085,7 @@
 
   .page-count {
     color: var(--quiet-ink);
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .preview-panel {
@@ -1183,7 +1124,7 @@
     padding: 6px 8px;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -1206,10 +1147,6 @@
   .source-panel .source-header {
     border-color: #354554;
     background: #202d39;
-  }
-
-  .source-panel .panel-kicker {
-    color: #9bbbe7;
   }
 
   :global(.source-panel .source-header h2) {
@@ -1235,7 +1172,7 @@
     white-space: pre-wrap;
   }
 
-  :global(label > span),
+  :global(.field-label),
   :global(.form-label) {
     font-family: var(--mono);
   }
@@ -1306,7 +1243,7 @@
 
     .generate-button {
       padding: 0 11px;
-      font-size: 9px;
+      font-size: 10px;
     }
 
     .register-button,

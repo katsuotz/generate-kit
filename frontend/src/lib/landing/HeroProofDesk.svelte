@@ -1,17 +1,12 @@
 <section class="hero section-frame" aria-labelledby="hero-title">
   <div class="hero-copy">
-    <p class="eyebrow">
-      <span class="eyebrow-dot" aria-hidden="true"></span>
-      Structured CV → rendered proof
-    </p>
     <h1 id="hero-title">
       Build the CV.
       <br />
       <span>See the proof.</span>
     </h1>
     <p class="hero-lede">
-      Marginalia turns the messy middle of making a CV into a clear, inspectable desk: shape your
-      facts, check the exact source, and leave with a document you can trust.
+      Enter your experience, review the generated LaTeX, and download the finished PDF.
     </p>
     <div class="hero-actions">
       <a class="button button-primary button-large" href="/app">
@@ -28,10 +23,6 @@
   </div>
 
   <div class="desk-wrap">
-    <div class="desk-label desk-label-top">
-      <span>Proof desk / 01</span>
-      <span>Live system</span>
-    </div>
     <div
       class="proof-desk"
       role="img"
@@ -54,10 +45,6 @@
             <span class="fact-key">work</span>
             <span>Analytical engine</span>
           </div>
-        </div>
-        <div class="stage-status">
-          <span class="status-dot" aria-hidden="true"></span>
-          Ready to shape
         </div>
       </div>
       <div class="desk-connector" aria-hidden="true">
@@ -109,17 +96,7 @@
             </div>
           </div>
         </div>
-        <div class="stage-status proof-ready">
-          <span class="status-dot" aria-hidden="true"></span>
-          Proof ready
-        </div>
       </div>
-      <span class="desk-pin pin-one" aria-hidden="true"></span>
-      <span class="desk-pin pin-two" aria-hidden="true"></span>
-    </div>
-    <div class="desk-label desk-label-bottom">
-      <span>From intake to evidence</span>
-      <span>01—03</span>
     </div>
   </div>
 </section>
@@ -165,7 +142,7 @@
     gap: 9px;
     color: var(--blue-dark);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-decoration: none;
@@ -183,7 +160,7 @@
     margin: 34px 0 0;
     color: var(--quiet-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -201,19 +178,6 @@
     justify-self: end;
   }
 
-  .desk-label {
-    justify-content: space-between;
-    padding: 0 2px 11px;
-    border-bottom: 1px solid var(--rule-strong);
-  }
-
-  .desk-label-bottom {
-    padding-top: 11px;
-    padding-bottom: 0;
-    border-top: 1px solid var(--rule-strong);
-    border-bottom: 0;
-  }
-
   .proof-desk {
     position: relative;
     display: grid;
@@ -227,7 +191,7 @@
     position: relative;
     display: grid;
     min-height: 310px;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr;
     gap: 22px;
     overflow: hidden;
     border: 1px solid var(--rule-strong);
@@ -254,14 +218,14 @@
   }
 
   .stage-heading strong {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   .stage-index {
     color: var(--blue);
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .fact-list {
@@ -284,28 +248,8 @@
   .fact-key {
     color: var(--quiet-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
-  }
-
-  .stage-status {
-    gap: 7px;
-    color: var(--quiet-ink);
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--blue);
-  }
-
-  .proof-ready .status-dot {
-    background: var(--success);
   }
 
   .source-stage pre {
@@ -313,7 +257,7 @@
     margin: 0;
     color: #36495d;
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.8;
     white-space: pre-wrap;
   }
@@ -330,7 +274,7 @@
   .source-meta {
     justify-content: space-between;
     color: var(--quiet-ink);
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .mini-paper {
@@ -417,25 +361,6 @@
     font-weight: 400;
   }
 
-  .desk-pin {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border: 1px solid var(--blue);
-    border-radius: 50%;
-    background: var(--canvas);
-  }
-
-  .pin-one {
-    top: 16px;
-    left: 23%;
-  }
-
-  .pin-two {
-    right: 13%;
-    bottom: 16px;
-  }
-
   @media (max-width: 940px) {
     .hero {
       grid-template-columns: 1fr;
@@ -496,16 +421,6 @@
 
     .desk-connector b {
       font-size: 16px;
-    }
-
-    .pin-one {
-      top: 9px;
-      left: 8%;
-    }
-
-    .pin-two {
-      right: 8%;
-      bottom: 9px;
     }
   }
 </style>

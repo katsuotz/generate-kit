@@ -15,6 +15,16 @@ These instructions apply to the whole repository. More specific instructions in 
 - Read `DESIGN.md` before making visual, layout, typography, color, component, responsive, or motion decisions.
 - Treat those files as the source of truth instead of copying their contents into this file. Preserve their constraints unless the user explicitly requests a change.
 
+## Anti-slop content and UI guardrails
+
+- Every visible string and UI element must serve a concrete user task. If it does not explain, guide, confirm, or help the user act, remove it instead of adding filler.
+- Do not generate AI-style garnish: invented eyebrow/kicker labels, motivational status text, fake metrics, decorative badges, redundant helper copy, generic feature claims, or empty states that only restate the page. Avoid phrases such as “ready to start,” “seamless,” “unlock,” “elevate,” “designed for you,” and similar marketing clichés unless the product requirements explicitly call for them.
+- Prefer direct, specific product language. Use the user's terminology, name the action and outcome, and avoid inflated claims, vague metaphors, and copy that sounds like a template.
+- Do not add visual noise to make a screen feel designed: no gratuitous cards, pills, borders, gradients, oversized hero typography, uppercase microcopy, decorative icons, repeated section labels, or centered filler blocks. Reuse the existing design tokens and component patterns; introduce a new visual treatment only when it solves a documented usability problem.
+- Keep hierarchy intentional. Use one clear primary action per context, meaningful status only when state exists, and no duplicate controls or labels. Remove a low-value element rather than rephrasing it.
+- Keep text readable across viewports: body and instructional copy should generally be at least 14px, controls and labels at least 11px, and nothing should be reduced below 10px except an explicitly documented decorative detail. Preserve adequate line height, contrast, focus states, and touch targets.
+- Before finishing UI work, inspect the result in a real browser at a desktop width and a narrow mobile width. Check for overflow, duplicate or unexplained text, inaccessible controls, and empty visual space. Use the Impeccable skill/audit when available and fix its findings rather than dismissing them without a reason.
+
 ## Shared working rules
 
 - Inspect `git status --short` and the relevant diff before editing. Treat existing staged, unstaged, and untracked changes as protected work.

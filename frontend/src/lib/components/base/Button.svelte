@@ -40,7 +40,7 @@
     padding: 0 14px;
     cursor: pointer;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -80,7 +80,7 @@
     color: var(--blue-dark);
     cursor: pointer;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -107,7 +107,7 @@
     background: transparent;
     color: var(--blue-dark);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;

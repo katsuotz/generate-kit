@@ -1,20 +1,12 @@
 <section id="how-it-works" class="workflow section-frame" aria-labelledby="workflow-title">
   <div class="workflow-intro">
-    <p class="eyebrow">
-      <span class="eyebrow-dot" aria-hidden="true"></span>
-      The workflow
-    </p>
-    <h2 id="workflow-title">
-      A clearer path
-      <br />
-      <span>to finished.</span>
-    </h2>
+    <h2 id="workflow-title">How it works.</h2>
   </div>
   <ol class="workflow-list">
     <li>
       <div class="workflow-marker" aria-hidden="true">01</div>
       <div>
-        <h3>Collect the signal</h3>
+        <h3>Add your details</h3>
         <p>
           Fill in the facts that matter, section by section. Your work stays editable and close at
           hand.
@@ -24,7 +16,7 @@
     <li>
       <div class="workflow-marker" aria-hidden="true">02</div>
       <div>
-        <h3>Inspect the source</h3>
+        <h3>Review the source</h3>
         <p>
           Generate exact XeLaTeX, keep the source visible, and see compiler notes when something
           needs attention.
@@ -34,7 +26,7 @@
     <li>
       <div class="workflow-marker" aria-hidden="true">03</div>
       <div>
-        <h3>Take the proof</h3>
+        <h3>Download your CV</h3>
         <p>Review the rendered pages, then download the PDF and the source that produced it.</p>
       </div>
     </li>

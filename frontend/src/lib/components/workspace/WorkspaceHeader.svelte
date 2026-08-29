@@ -34,16 +34,15 @@
         ? 'Proof outdated'
         : proofStatus === 'success'
           ? 'Proof ready'
-          : 'Ready to start';
+          : proofStatus === 'failure'
+            ? 'Needs attention'
+            : '';
 </script>
 
 <header class="workspace-header">
   <div class="brand-lockup">
     <div class="brand-mark" aria-hidden="true">M</div>
-    <div>
-      <h1>Marginalia</h1>
-      <p>{presentation === 'intake' ? 'CV builder' : 'Proof workspace'}</p>
-    </div>
+    <h1>Marginalia</h1>
   </div>
   <div class="header-actions">
     <div class="account-controls">
@@ -68,7 +67,6 @@
           aria-label={authMode === 'login' ? 'Log in' : 'Create account'}>
           <div class="account-panel-heading">
             <div>
-              <p class="panel-kicker">Optional account</p>
               <h2>{authMode === 'login' ? 'Welcome back' : 'Save your CV everywhere'}</h2>
             </div>
             <Button
@@ -117,15 +115,17 @@
         </div>
       {/if}
     </div>
-    <span
-      class="proof-status"
-      class:is-loading={proofStatus === 'loading'}
-      class:is-success={proofStatus === 'success' && !dirty}
-      class:is-stale={dirty && hasGeneratedSource}
-      class:is-failure={proofStatus === 'failure'}
-      role="status">
-      {statusLabel}
-    </span>
+    {#if statusLabel}
+      <span
+        class="proof-status"
+        class:is-loading={proofStatus === 'loading'}
+        class:is-success={proofStatus === 'success' && !dirty}
+        class:is-stale={dirty && hasGeneratedSource}
+        class:is-failure={proofStatus === 'failure'}
+        role="status">
+        {statusLabel}
+      </span>
+    {/if}
     {#if presentation === 'workspace'}
       <Button
         variant="secondary"
@@ -179,8 +179,7 @@
     letter-spacing: -0.05em;
   }
 
-  .brand-lockup h1,
-  .brand-lockup p {
+  .brand-lockup h1 {
     margin: 0;
   }
 
@@ -190,24 +189,15 @@
     letter-spacing: -0.02em;
   }
 
-  .brand-lockup p,
-  .panel-kicker,
   .proof-status,
-  :global(label > span) {
+  :global(.field-label) {
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.08em;
     line-height: 1.3;
     text-transform: uppercase;
-  }
-
-  .brand-lockup p {
-    margin-top: 3px;
-    color: var(--quiet-ink);
-    font-size: 9px;
-    letter-spacing: 0.12em;
   }
 
   .header-actions {
@@ -222,7 +212,7 @@
   :global(.account-button) {
     min-height: 32px;
     padding: 0 10px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .account-label {
@@ -230,7 +220,7 @@
     overflow: hidden;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -273,7 +263,7 @@
     gap: 14px;
   }
 
-  :global(.account-panel label > span) {
+  :global(.account-panel .field-label) {
     display: block;
     margin-bottom: 6px;
   }
@@ -302,7 +292,7 @@
     margin-top: 15px;
     padding: 0;
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.04em;
   }
 
@@ -370,7 +360,7 @@
 
     :global(.generate-button) {
       padding: 0 11px;
-      font-size: 9px;
+      font-size: 10px;
     }
 
     .account-panel {

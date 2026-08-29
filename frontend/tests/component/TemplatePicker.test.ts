@@ -8,60 +8,55 @@ const templates = [
 ];
 
 describe('TemplatePicker', () => {
-  it('exposes native radio selection and an accessible preview fallback', async () => {
+  it('uses static image previews without requesting PDFs', async () => {
     const onSelect = vi.fn();
     render(TemplatePicker, {
       templates,
       selectedId: 'editorial-v1',
-      loadPreview: vi.fn().mockRejectedValue(new Error('preview unavailable')),
       onSelect
     });
 
+    expect(screen.getByAltText('Editorial dossier CV template preview')).toHaveAttribute(
+      'src',
+      '/templates/editorial-v1.webp'
+    );
+    expect(screen.getByAltText('Compact signal CV template preview')).toHaveAttribute(
+      'src',
+      '/templates/compact-v1.webp'
+    );
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(2);
     expect(radios[0]).toBeChecked();
     await fireEvent.click(radios[1]);
     expect(onSelect).toHaveBeenCalledWith('compact-v1');
-    await waitFor(() => expect(screen.getAllByText('Preview unavailable')).toHaveLength(2));
   });
 
-  it('loads previews when templates arrive after mount and only requests each template once', async () => {
-    const loadPreview = vi.fn().mockResolvedValue(new ArrayBuffer(8));
-    const { rerender } = render(TemplatePicker, {
-      templates: [],
-      selectedId: '',
-      loadPreview,
-      onSelect: vi.fn()
-    });
-
-    await rerender({ templates });
-
-    await waitFor(() => expect(loadPreview).toHaveBeenCalledTimes(2));
-    expect(loadPreview).toHaveBeenNthCalledWith(1, 'editorial-v1', expect.any(AbortSignal));
-    expect(loadPreview).toHaveBeenNthCalledWith(2, 'compact-v1', expect.any(AbortSignal));
-    await rerender({ templates: [...templates] });
-    expect(loadPreview).toHaveBeenCalledTimes(2);
-  });
-
-  it('allows a failed preview to be retried without stale request state winning', async () => {
-    let rejectPreview!: (error: Error) => void;
-    const loadPreview = vi
-      .fn()
-      .mockImplementationOnce(
-        () => new Promise<ArrayBuffer>((_, reject) => (rejectPreview = reject))
-      )
-      .mockResolvedValueOnce(new ArrayBuffer(8));
+  it('opens and closes a larger static preview', async () => {
     render(TemplatePicker, {
-      templates: [templates[0]],
-      selectedId: '',
-      loadPreview,
+      templates,
+      selectedId: 'editorial-v1',
       onSelect: vi.fn()
     });
 
-    rejectPreview(new Error('preview unavailable'));
-    await waitFor(() => expect(screen.getByText('Preview unavailable')).toBeVisible());
-    await fireEvent.click(screen.getByRole('button', { name: 'Retry Editorial dossier preview' }));
-    await waitFor(() => expect(loadPreview).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByText('Preview unavailable')).not.toBeInTheDocument());
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'View larger preview of Editorial dossier' })
+    );
+    const dialog = await waitFor(() => screen.getByRole('dialog', { name: 'Editorial dossier' }));
+    expect(dialog).toBeVisible();
+    expect(dialog.querySelector('img')).toHaveAttribute('src', '/templates/editorial-v1.webp');
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog', { name: 'Editorial dossier' })).not.toBeInTheDocument();
+  });
+
+  it('keeps unknown templates selectable without inventing an image', () => {
+    render(TemplatePicker, {
+      templates: [{ id: 'unknown-v1', name: 'Unknown', description: 'Fallback' }],
+      selectedId: '',
+      onSelect: vi.fn()
+    });
+
+    expect(screen.getByText('No preview available')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /View larger preview/ })).not.toBeInTheDocument();
   });
 });

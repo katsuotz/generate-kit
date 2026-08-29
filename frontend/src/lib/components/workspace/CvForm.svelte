@@ -15,7 +15,6 @@
   export let data: CvData;
   export let templates: CvTemplateSummary[] = [];
   export let templateId = '';
-  export let loadPreview: (templateId: string, signal?: AbortSignal) => Promise<ArrayBuffer>;
   export let onSelectTemplate: (templateId: string) => void;
   export let activeSection: CvSectionId;
   export let presentation: 'intake' | 'workspace';
@@ -55,18 +54,6 @@
           : descriptions[activeSection]}
       </p>
     </div>
-    {#if presentation === 'intake' && activeSection === 'summary'}
-      <div class="intake-guide">
-        <span class="guide-mark" aria-hidden="true">1</span>
-        <div>
-          <strong>Start with the details employers need first.</strong>
-          <span>
-            Fields marked <b aria-hidden="true">*</b>
-            are required. Add an email, phone number, or profile link so people can reach you.
-          </span>
-        </div>
-      </div>
-    {/if}
     {#if errors.length}
       <p class="form-alert" role="alert">
         <strong>Review this section.</strong>
@@ -80,7 +67,6 @@
         {data}
         {templates}
         selectedTemplateId={templateId}
-        {loadPreview}
         {onSelectTemplate}
         {fieldError}
         {onAddProfile}
@@ -175,7 +161,7 @@
   .section-kicker {
     margin-bottom: 10px !important;
     color: var(--blue-dark);
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .form-heading h2 {
@@ -186,52 +172,11 @@
   }
 
   .form-heading p:not(.section-kicker) {
-    max-width: 52ch;
+    max-width: unset;
     margin-top: 10px;
     color: var(--muted-ink);
     font-size: 16px;
     line-height: 1.5;
-  }
-
-  .intake-guide {
-    display: flex;
-    gap: 13px;
-    margin-bottom: 28px;
-    border: 1px solid #c9dafa;
-    border-radius: 8px;
-    padding: 14px 16px;
-    background: var(--blue-soft);
-    color: var(--blue-dark);
-    animation: reveal 220ms ease-out both;
-  }
-
-  .guide-mark {
-    display: grid;
-    width: 22px;
-    height: 22px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--blue);
-    color: #fff;
-    font-family: var(--mono);
-    font-size: 10px;
-  }
-
-  .intake-guide strong,
-  .intake-guide span {
-    display: block;
-  }
-
-  .intake-guide strong {
-    font-size: 13px;
-  }
-
-  .intake-guide span {
-    margin-top: 3px;
-    color: #315a91;
-    font-size: 13px;
-    line-height: 1.45;
   }
 
   .form-alert,
@@ -266,7 +211,7 @@
 
   .page-count {
     color: var(--quiet-ink);
-    font-size: 9px;
+    font-size: 10px;
   }
 
   @media (max-width: 900px) {

@@ -8,7 +8,6 @@
   export let data: CvData;
   export let templates: CvTemplateSummary[] = [];
   export let selectedTemplateId = '';
-  export let loadPreview: (templateId: string, signal?: AbortSignal) => Promise<ArrayBuffer>;
   export let onSelectTemplate: (templateId: string) => void;
   export let fieldError: (path: string) => string | undefined;
   export let onAddProfile: () => void;
@@ -33,11 +32,7 @@
 </script>
 
 {#if templates.length}
-  <TemplatePicker
-    {templates}
-    selectedId={selectedTemplateId}
-    {loadPreview}
-    onSelect={onSelectTemplate} />
+  <TemplatePicker {templates} selectedId={selectedTemplateId} onSelect={onSelectTemplate} />
 {/if}
 
 <div class="grid grid-cols-2 gap-x-7 gap-y-6 max-[560px]:grid-cols-1">

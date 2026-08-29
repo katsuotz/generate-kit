@@ -42,7 +42,7 @@
 </script>
 
 <label class:col-span-2={wide} class={className}>
-  <span>
+  <span class="field-label">
     {label}{#if required}<b aria-hidden="true">*</b>
       <span class="sr-only">(required)</span>{/if}
   </span>
@@ -72,20 +72,31 @@
 </label>
 
 <style>
-  :global(label > span),
   :global(.form-label) {
     display: block;
     margin-bottom: 7px;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.08em;
     line-height: 1.3;
     text-transform: uppercase;
   }
 
-  :global(label > span b) {
+  .field-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--muted-ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .field-label b {
     color: var(--blue);
   }
 

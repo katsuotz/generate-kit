@@ -9,7 +9,11 @@ test('shows the proof-led landing page and routes visitors to the builder', asyn
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Build the CV\. See the proof\./ })).toBeVisible();
-  await expect(page.getByText('Structured CV → rendered proof')).toBeVisible();
+  await expect(
+    page.getByText(
+      'Enter your experience, review the generated LaTeX, and download the finished PDF.'
+    )
+  ).toBeVisible();
   await expect(page.getByRole('region', { name: 'CV form builder' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Open builder' })).toHaveAttribute('href', '/app');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/$/);

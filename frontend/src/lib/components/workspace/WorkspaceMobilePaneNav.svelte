@@ -39,7 +39,7 @@
     background: transparent;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -73,7 +73,7 @@
     border-radius: 50%;
     background: var(--danger);
     color: #fff;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   @media (max-width: 900px) {

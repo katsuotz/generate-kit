@@ -32,7 +32,7 @@
 </script>
 
 <label class:col-span-2={wide} class={className}>
-  <span>
+  <span class="field-label">
     {label}{#if required}<b aria-hidden="true">*</b>
       <span class="sr-only">(required)</span>{/if}
   </span>

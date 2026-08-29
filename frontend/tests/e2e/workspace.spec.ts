@@ -10,7 +10,6 @@ test.beforeEach(async ({ page }) => {
 test('starts in focused intake, validates, and reveals the proof workspace on request', async ({
   page
 }) => {
-  await expect(page.getByText('Ready to start')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download PDF' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Rendered preview' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
@@ -20,7 +19,6 @@ test('starts in focused intake, validates, and reveals the proof workspace on re
   await expect(page.getByLabel(/Full name/)).toBeFocused();
   await page.getByLabel(/Full name/).fill('Ada Lovelace');
   await page.getByLabel('Email').fill('ada@example.com');
-  await expect(page.getByText('Ready to start')).toBeVisible();
   await page.getByRole('button', { name: 'Generate CV' }).click();
   await expect(
     page.getByRole('region', { name: 'Rendered preview' }).getByLabel('PDF page 1')
@@ -102,6 +100,20 @@ test('selects a template, persists it, and marks the previous proof outdated', a
   await expect(page.getByRole('radio', { name: 'Use Modern hierarchy template' })).toBeChecked();
 });
 
+test('opens a larger example preview from the template picker', async ({ page }) => {
+  const previewButton = page.getByRole('button', {
+    name: 'View larger preview of Editorial dossier'
+  });
+  await expect(previewButton).toBeVisible();
+  await previewButton.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Editorial dossier' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('PDF page 1')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test('opens the proof workspace with actionable diagnostics on a first-run failure', async ({
   page
 }) => {
@@ -130,6 +142,19 @@ test('moves between form sections and exposes exact source actions', async ({ pa
   await page.getByRole('button', { name: 'Source' }).click();
   await expect(page.getByRole('heading', { name: 'LaTeX source' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download .tex' })).toBeEnabled();
+});
+
+test('opens and closes a full-page proof preview', async ({ page }) => {
+  await page.getByLabel(/Full name/).fill('Ada Lovelace');
+  await page.getByLabel('Email').fill('ada@example.com');
+  await page.getByRole('button', { name: 'Generate CV' }).click();
+  await expect(page.getByRole('button', { name: 'Full page' })).toBeVisible();
+  await page.getByRole('button', { name: 'Full page' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Full-page preview' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('PDF page 1')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
 });
 
 test('keeps form and preview navigation usable on mobile', async ({ page }) => {
@@ -212,7 +237,6 @@ test('continues editing when remote autosave is unavailable', async ({ page }) =
     await route.continue();
   });
   await page.reload();
-  await expect(page.getByText('Ready to start')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Generate CV' })).toBeEnabled();
   await page.getByLabel(/Full name/).fill('Ada Lovelace');
   await expect(page.getByText(/Could not save this draft/)).toBeVisible();

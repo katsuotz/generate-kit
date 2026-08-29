@@ -74,7 +74,7 @@
   .diagnostics-heading p {
     color: var(--danger);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -120,7 +120,7 @@
   code {
     color: var(--danger);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     white-space: nowrap;
   }
 

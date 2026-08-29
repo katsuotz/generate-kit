@@ -14,7 +14,10 @@
 
 <style>
   .site-header {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 24px;
     min-height: 88px;
     border-bottom: 1px solid var(--rule);
   }
@@ -26,7 +29,7 @@
   .site-nav a:not(.button) {
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-decoration: none;
@@ -53,7 +56,7 @@
     .site-nav .button {
       min-height: 34px;
       padding: 0 11px;
-      font-size: 9px;
+      font-size: 10px;
     }
   }
 </style>

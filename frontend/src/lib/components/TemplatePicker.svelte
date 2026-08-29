@@ -1,83 +1,52 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { tick } from 'svelte';
   import type { CvTemplateSummary } from '$lib/api';
   import { RadioCard } from './base';
-  import PdfPreview from './PdfPreview.svelte';
 
   export let templates: CvTemplateSummary[] = [];
   export let selectedId = '';
-  export let loadPreview: (templateId: string, signal?: AbortSignal) => Promise<ArrayBuffer>;
   export let onSelect: (templateId: string) => void;
 
-  type PreviewState = { status: 'loading' | 'ready' | 'error'; data?: ArrayBuffer };
-  let previews: Record<string, PreviewState> = {};
-  let mounted = false;
-  const requested = new Set<string>();
-  const requests = new Map<string, AbortController>();
+  const templateImages: Record<string, string> = {
+    'editorial-v1': '/templates/editorial-v1.webp',
+    'compact-v1': '/templates/compact-v1.webp',
+    'modern-v1': '/templates/modern-v1.webp'
+  };
 
-  $: if (mounted) syncPreviews(templates);
+  let previewTemplateId: string | null = null;
+  let previewDialog: HTMLDialogElement;
+  let previewTemplate: CvTemplateSummary | undefined;
+  let previewImage = '';
 
-  function syncPreviews(nextTemplates: CvTemplateSummary[]) {
-    const ids = new Set(nextTemplates.map((template) => template.id));
-    for (const [templateId, controller] of requests) {
-      if (!ids.has(templateId)) {
-        controller.abort();
-        requests.delete(templateId);
-        requested.delete(templateId);
+  $: previewTemplate = templates.find((template) => template.id === previewTemplateId);
+  $: previewImage = previewTemplate ? (templateImages[previewTemplate.id] ?? '') : '';
+
+  function openPreview(templateId: string) {
+    if (!templateImages[templateId]) return;
+    previewTemplateId = templateId;
+    void tick().then(() => {
+      if (previewDialog && !previewDialog.open) {
+        if (typeof previewDialog.showModal === 'function') previewDialog.showModal();
+        else previewDialog.setAttribute('open', '');
       }
-    }
-
-    for (const template of nextTemplates) {
-      if (!requested.has(template.id)) requestPreview(template.id);
-    }
+      previewDialog?.focus();
+    });
   }
 
-  function requestPreview(templateId: string) {
-    requested.add(templateId);
-    const controller = new AbortController();
-    requests.set(templateId, controller);
-    previews = { ...previews, [templateId]: { status: 'loading' } };
-    void loadPreview(templateId, controller.signal)
-      .then((data) => {
-        if (controller.signal.aborted || requests.get(templateId) !== controller) return;
-        requests.delete(templateId);
-        previews = { ...previews, [templateId]: { status: 'ready', data } };
-      })
-      .catch(() => {
-        if (controller.signal.aborted || requests.get(templateId) !== controller) return;
-        requests.delete(templateId);
-        previews = { ...previews, [templateId]: { status: 'error' } };
-      });
-  }
-
-  function retryPreview(templateId: string) {
-    requested.delete(templateId);
-    requestPreview(templateId);
-  }
-
-  onMount(() => {
-    mounted = true;
-    syncPreviews(templates);
-    return () => {
-      mounted = false;
-      for (const controller of requests.values()) controller.abort();
-      requests.clear();
-    };
-  });
-
-  function handlePreviewError(templateId: string) {
-    previews = { ...previews, [templateId]: { status: 'error' } };
+  function closePreview() {
+    if (previewDialog && typeof previewDialog.close === 'function') previewDialog.close();
+    else previewDialog?.removeAttribute('open');
+    previewTemplateId = null;
   }
 </script>
 
 <fieldset class="template-picker" aria-describedby="template-picker-help">
   <legend>Choose a template</legend>
   <p id="template-picker-help" class="template-picker-help">
-    Select the visual system for your CV. You can switch before generating again.
+    Choose a layout. View an example before generating your CV.
   </p>
   <div class="template-grid" role="radiogroup" aria-label="CV templates">
     {#each templates as template (template.id)}
-      {@const preview = previews[template.id]}
       <div class="template-option">
         <RadioCard
           className="template-card"
@@ -89,35 +58,62 @@
           aria-label={`Use ${template.name} template`}
           onChange={() => onSelect(template.id)}>
           <span class="template-preview">
-            {#if preview?.status === 'ready' && preview.data}
-              <PdfPreview
-                data={preview.data.slice(0)}
-                firstPageOnly
-                compact
-                onError={() => handlePreviewError(template.id)} />
-            {:else if preview?.status === 'loading'}
-              <span class="template-loading">Loading preview…</span>
+            {#if templateImages[template.id]}
+              <img
+                src={templateImages[template.id]}
+                alt={`${template.name} CV template preview`}
+                width="612"
+                height="792"
+                loading="eager"
+                decoding="async" />
             {:else}
               <span class="template-fallback">
                 <span class="fallback-mark">{template.name.slice(0, 1).toUpperCase()}</span>
-                <span>Preview unavailable</span>
+                <span>No preview available</span>
               </span>
             {/if}
           </span>
         </RadioCard>
-        {#if preview?.status === 'error'}
+        {#if templateImages[template.id]}
           <button
-            class="template-retry"
+            class="template-preview-action"
             type="button"
-            aria-label={`Retry ${template.name} preview`}
-            on:click={() => retryPreview(template.id)}>
-            Retry preview
+            aria-label={`View larger preview of ${template.name}`}
+            on:click={() => openPreview(template.id)}>
+            View preview
           </button>
         {/if}
       </div>
     {/each}
   </div>
 </fieldset>
+
+{#if previewTemplate && previewImage}
+  <dialog
+    class="template-preview-modal"
+    aria-labelledby="template-preview-title"
+    aria-modal="true"
+    bind:this={previewDialog}
+    on:cancel|preventDefault={closePreview}
+    on:close={() => (previewTemplateId = null)}>
+    <div class="template-preview-modal-header">
+      <div>
+        <h2 id="template-preview-title">{previewTemplate.name}</h2>
+        <p>{previewTemplate.description}</p>
+      </div>
+      <button class="template-preview-close" type="button" on:click={closePreview}>Close</button>
+    </div>
+    <div class="template-preview-modal-body">
+      <img
+        class="template-preview-modal-image"
+        src={previewImage}
+        alt={`${previewTemplate.name} CV template preview`}
+        width="612"
+        height="792"
+        decoding="async" />
+    </div>
+  </dialog>
+{/if}
 
 <style>
   .template-picker {
@@ -182,51 +178,63 @@
 
   .template-preview {
     display: grid;
-    min-height: 184px;
+    height: 280px;
     place-items: center;
     overflow: hidden;
     border: 1px solid var(--rule);
     background: #e5eaf0;
   }
 
+  .template-preview img {
+    display: block;
+    width: min(100%, 230px);
+    height: 100%;
+    object-fit: contain;
+    border: 1px solid rgb(23 33 43 / 10%);
+    box-shadow: 0 5px 14px rgb(23 33 43 / 15%);
+  }
+
   .template-option {
     min-width: 0;
   }
 
-  .template-retry {
+  .template-preview-action {
     display: block;
-    margin: 7px auto 0;
-    border: 0;
-    background: transparent;
+    width: 100%;
+    margin-top: 8px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: var(--surface);
     color: var(--blue-dark);
     cursor: pointer;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      color 180ms ease;
   }
 
-  .template-retry:hover {
+  .template-preview-action:hover {
+    border-color: var(--blue);
+    background: var(--blue-soft);
     color: var(--blue);
-    text-decoration: underline;
-    text-underline-offset: 3px;
   }
 
-  .template-preview :global(.pdf-pages) {
-    align-self: stretch;
+  .template-preview-action:focus-visible,
+  .template-preview-close:focus-visible {
+    outline: 3px solid rgb(23 105 210 / 24%);
+    outline-offset: 2px;
   }
 
-  .template-preview :global(canvas) {
-    width: 100%;
-    box-shadow: 0 5px 14px rgb(23 33 43 / 15%);
-  }
-
-  .template-loading,
   .template-fallback {
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.05em;
     text-align: center;
     text-transform: uppercase;
@@ -249,6 +257,85 @@
     font-weight: 700;
   }
 
+  .template-preview-modal {
+    display: flex;
+    width: min(960px, calc(100vw - 32px));
+    height: min(92vh, 920px);
+    max-width: none;
+    margin: auto;
+    flex-direction: column;
+    border: 1px solid var(--rule-strong);
+    padding: 0;
+    background: var(--surface);
+    box-shadow: 0 24px 80px rgb(23 33 43 / 24%);
+    color: var(--ink);
+  }
+
+  .template-preview-modal::backdrop {
+    background: rgb(23 33 43 / 54%);
+  }
+
+  .template-preview-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px;
+    background: var(--surface-subtle);
+  }
+
+  .template-preview-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.03em;
+  }
+
+  .template-preview-modal-header p {
+    max-width: 560px;
+    margin: 4px 0 0;
+    color: var(--muted-ink);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .template-preview-close {
+    flex: 0 0 auto;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: var(--surface);
+    color: var(--blue-dark);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .template-preview-close:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  .template-preview-modal-body {
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+    padding: clamp(20px, 4vw, 40px);
+    background: var(--canvas);
+  }
+
+  .template-preview-modal-image {
+    display: block;
+    width: min(100%, 612px);
+    height: auto;
+    margin: 0 auto;
+    border: 1px solid rgb(23 33 43 / 10%);
+    box-shadow: 0 12px 18px rgb(23 33 43 / 14%);
+  }
+
   @media (max-width: 560px) {
     .template-grid {
       grid-template-columns: 1fr;
@@ -265,7 +352,26 @@
 
     .template-preview {
       grid-row: span 3;
-      min-height: 148px;
+      height: 148px;
+    }
+
+    .template-preview-modal {
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+    }
+
+    .template-preview-modal-header {
+      align-items: flex-start;
+      padding: 13px 16px;
+    }
+
+    .template-preview-modal-header p {
+      display: none;
+    }
+
+    .template-preview-modal-body {
+      padding: 14px;
     }
   }
 </style>

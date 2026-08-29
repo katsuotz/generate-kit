@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
 
-  type PdfModule = typeof import('pdfjs-dist');
+  type PdfModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
   type PdfLoadingTask = ReturnType<PdfModule['getDocument']>;
   type PdfDocument = Awaited<PdfLoadingTask['promise']>;
 
@@ -34,8 +34,8 @@
   }
 
   async function renderPdf(source: ArrayBuffer, currentRender: number) {
-    const pdfjs = await import('pdfjs-dist');
-    const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const worker = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url');
     if (currentRender !== renderId) return;
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
     await loadingTask?.destroy();
@@ -113,7 +113,7 @@
     padding: 18px;
     color: var(--muted-ink);
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -121,6 +121,6 @@
 
   .pdf-pages.compact .pdf-status {
     padding: 12px;
-    font-size: 9px;
+    font-size: 10px;
   }
 </style>

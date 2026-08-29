@@ -102,14 +102,14 @@
 
   .radio-card-content > span:not(.radio-card-state) {
     color: var(--muted-ink);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
   }
 
   .radio-card-state {
     color: var(--blue-dark);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
